@@ -34,8 +34,8 @@ def manage_addUsersEditor(self, id, REQUEST=None):
     th = self._getOb(id)
     # check we have our dependencies installed (LDAPUserFolder, MailHost)
     # (if these fail, they will raise an error, and abort the ZODB transaction)
-    th._get_ldapuserfolder()
-    th._get_mailhost()
+    #th._get_ldapuserfolder()
+    #th._get_mailhost()
 
     if REQUEST is not None:
         return self.manage_main(self, REQUEST, update_menu=1)
@@ -151,6 +151,12 @@ class UsersEditor(SimpleItem):
             '"MailHost". Please create one.')
 
     def _send_mail(self, msg_to, msg_subject, msg_body):
+        if check_divert_mail():
+            save_mail_message({'to': msg_to,
+                               'subject': msg_subject,
+                               'body': msg_body})
+            return
+
         mailhost = self._get_mailhost()
 
         from email.MIMEText import MIMEText
@@ -553,3 +559,16 @@ class UsersEditor(SimpleItem):
             return result
 
 InitializeClass(UsersEditor)
+
+def check_divert_mail():
+    global check_divert_mail
+    global save_mail_message
+    try:
+        from eea.roleseditor.tests.functional_mocks import divert_mail
+        if divert_mail:
+            save_mail_message = divert_mail
+            check_divert_mail = lambda: True
+            return True
+    except:
+        pass
+    check_divert_mail = lambda: False

@@ -1,24 +1,3 @@
-# The contents of this file are subject to the Mozilla Public
-# License Version 1.1 (the "License"); you may not use this file
-# except in compliance with the License. You may obtain a copy of
-# the License at http://www.mozilla.org/MPL/
-#
-# Software distributed under the License is distributed on an "AS
-# IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
-# implied. See the License for the specific language governing
-# rights and limitations under the License.
-#
-# The Initial Owner of the Original Code is European Environment
-# Agency (EEA).  Portions created by Eau de Web are
-# Copyright (C) European Environment Agency.  All
-# Rights Reserved.
-#
-# Authors:
-#
-# Alex Morega, Eau de Web
-
-__version__='0.1'
-
 # Python imports
 from datetime import datetime, timedelta
 import re
@@ -43,13 +22,13 @@ def random_sha_b64():
     
     return b64encode(sha(str(random())).digest())[:-2].replace('/', '_').replace('+', '.')
 
-class EionetLDAPConfigurationError(Exception):
+class UsersEditorConfigurationError(Exception):
     pass
 
-manage_addEionetLDAP_html = PageTemplateFile('zpt/add', globals())
-def manage_addEionetLDAP(self, id, REQUEST=None):
-    """ Adds a new Eionet LDAP object """
-    ob = EionetLDAP(id)
+manage_addUsersEditor_html = PageTemplateFile('zpt/add', globals())
+def manage_addUsersEditor(self, id, REQUEST=None):
+    """ Adds a new Eionet Users Editor object """
+    ob = UsersEditor(id)
     self._setObject(id, ob)
     
     th = self._getOb(id)
@@ -61,11 +40,12 @@ def manage_addEionetLDAP(self, id, REQUEST=None):
     if REQUEST is not None:
         return self.manage_main(self, REQUEST, update_menu=1)
 
-class EionetLDAP(SimpleItem):
-    """ Eionet LDAP """
+class UsersEditor(SimpleItem):
+    """ Eionet Users Editor """
     
-    meta_type = 'Eionet LDAP'
-    product_name = 'Eionet LDAP'
+    meta_type = 'Eionet Users Editor'
+    icon = 'misc_/EionetUsersEditor/users_editor.gif'
+    product_name = 'Eionet Users Editor'
     manage_options = (
         {'label':'Properties', 'action':'manage_propertiesForm'},
         {'label':'View', 'action':'index_html'},
@@ -143,17 +123,17 @@ class EionetLDAP(SimpleItem):
             # check that we have a LDAPUserFolder instance, and that it's
             # properly configured
             if not isinstance(ob, LDAPUserFolder):
-                raise EionetLDAPConfigurationError('Expected LDAPUserFolder '
+                raise UsersEditorConfigurationError('Expected LDAPUserFolder '
                     'object at "acl_users"')
             
             for ldap_class in ['top', 'person', 'organizationalPerson', 'inetOrgPerson']:
                 if ldap_class not in ob._user_objclasses:
-                    raise EionetLDAPConfigurationError('LDAPUserFolder configuration '
+                    raise UsersEditorConfigurationError('LDAPUserFolder configuration '
                         'parameter "User object classes" needs value "%s"' % ldap_class)
             for attr in ['mail', 'cn', 'givenName', 'sn', 'o', 'postalAddress',
                     'telephoneNumber', 'labeledURI', 'uid']:
                 if attr not in ob._ldapschema:
-                    raise EionetLDAPConfigurationError('Schema of LDAPUserFolder '
+                    raise UsersEditorConfigurationError('Schema of LDAPUserFolder '
                         'instance has no attribute named %s' % attr)
             
             self._v_ldapuserfolder = ob
@@ -167,7 +147,7 @@ class EionetLDAP(SimpleItem):
                 return ob
         except:
             pass
-        raise EionetLDAPConfigurationError('Expected a MailHost object named '
+        raise UsersEditorConfigurationError('Expected a MailHost object named '
             '"MailHost". Please create one.')
     
     def _send_mail(self, msg_to, msg_subject, msg_body):
@@ -572,4 +552,4 @@ class EionetLDAP(SimpleItem):
         else:
             return result
 
-InitializeClass(EionetLDAP)
+InitializeClass(UsersEditor)

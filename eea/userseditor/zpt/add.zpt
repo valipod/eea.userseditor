@@ -2,8 +2,8 @@
 
 <h1>Add EionetLDAP account tools</h1>
 
-<form action="manage_addEionetLDAP" method="post">
-    <label for="id">Id:</label><input id="id" type="text" name="id" size="50" value="EionetLDAP" /><br />
+<form action="manage_addUsersEditor" method="post">
+    <label for="id">Id:</label><input id="id" type="text" name="id" size="50" value="users" /><br />
     <input type="submit" value="Add" />
 </form>
 

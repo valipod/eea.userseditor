@@ -10,10 +10,14 @@
     <li><a tal:attributes="href string:${here/absolute_url}/create_account"
         >Create account</a></li>
     <li>
-        <a tal:condition="not:current_user" tal:attributes="href string:${here/absolute_url}/?login=y">Log in</a>
+        <a tal:condition="not:current_user"
+           tal:attributes="href string:${here/absolute_url}/?login=y"
+           >Log in</a>
         <tal:block condition="current_user">
-            Currently logged in as <em><tal:block content="current_user" /></em>
-            (<a tal:attributes="href string:${here/absolute_url}/force_logout">force logout</a>)
+            Currently logged in as
+            <em><tal:block content="current_user" /></em>
+            (<a tal:attributes="href string:${here/absolute_url}/force_logout"
+             >force logout</a>)
         </tal:block>
     </li>
     <li tal:condition="not:current_user"><a
@@ -25,7 +29,8 @@
     <li tal:condition="current_user"><a
         tal:attributes="href string:${here/absolute_url}/change_password"
         >Change password</a></li>
-    <li><a tal:attributes="href string:${here/acl_users/absolute_url}/manage_userrecords">Management pages</a></li>
+    <li><a tal:attributes="href string:${here/acl_users/absolute_url}/manage_userrecords"
+           >Management pages</a></li>
 </ul>
 
 <tal:block replace="structure here/standard_html_footer" />

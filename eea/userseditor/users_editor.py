@@ -7,6 +7,7 @@ from AccessControl import ClassSecurityInfo
 from Globals import InitializeClass
 from Products.PageTemplates.PageTemplateFile import PageTemplateFile
 from OFS.SimpleItem import SimpleItem
+from OFS.PropertyManager import PropertyManager
 from AccessControl import getSecurityManager
 from AccessControl.SecurityManagement import noSecurityManager
 from AccessControl.unauthorized import Unauthorized
@@ -18,6 +19,7 @@ from persistent.mapping import PersistentMapping
 # Product imports
 from Products.LDAPUserFolder import LDAPUserFolder, utils as ldap_utils
 
+from ldap_agent import LdapAgent
 from templates import z3_tmpl
 
 def random_sha_b64():
@@ -579,15 +581,26 @@ def _set_session_message(request, msg_type, msg):
     # TODO: allow for more than one message of each type
     session[SESSION_MESSAGES][msg_type] = msg
 
-class NewUsersEditor(SimpleItem):
+class NewUsersEditor(SimpleItem, PropertyManager):
+    meta_type = 'Eionet Users Editor'
+    icon = 'misc_/EionetUsersEditor/users_editor.gif'
+
+    _properties = (
+        {'id':'ldap_server', 'type': 'string', 'mode':'w',
+         'label': 'LDAP Server'},
+    )
+
+    manage_options = PropertyManager.manage_options + SimpleItem.manage_options
+
     def __init__(self, id):
         self.id = id
+        self.ldap_server = ""
 
     _form_fields = ['uid', 'email', 'organisation', 'uri',
                     'postal_address', 'telephone_number']
 
     def _get_ldap_agent(self):
-        raise NotImplementedError
+        return LdapAgent(self.ldap_server)
 
     def edit_account_html(self, REQUEST):
         user_id = REQUEST.AUTHENTICATED_USER.getId()

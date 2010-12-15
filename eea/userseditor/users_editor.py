@@ -10,6 +10,7 @@ from OFS.SimpleItem import SimpleItem
 from OFS.PropertyManager import PropertyManager
 from AccessControl import getSecurityManager
 from AccessControl.SecurityManagement import noSecurityManager
+from AccessControl.Permissions import view
 from AccessControl.unauthorized import Unauthorized
 from Products.MailHost.MailHost import MailHost
 
@@ -571,8 +572,12 @@ SESSION_MESSAGES = 'eea.userseditor.messages'
 
 def _get_session_messages(request):
     session = request.SESSION
-    # TODO: does this work with a real session?
-    return session.pop(SESSION_MESSAGES, {})
+    if SESSION_MESSAGES in session.keys():
+        msgs = session[SESSION_MESSAGES]
+        del session[SESSION_MESSAGES]
+    else:
+        msgs = {}
+    return msgs
 
 def _set_session_message(request, msg_type, msg):
     session = request.SESSION
@@ -581,16 +586,17 @@ def _set_session_message(request, msg_type, msg):
     # TODO: allow for more than one message of each type
     session[SESSION_MESSAGES][msg_type] = msg
 
-class NewUsersEditor(SimpleItem, PropertyManager):
+class UsersEditor(SimpleItem, PropertyManager):
     meta_type = 'Eionet Users Editor'
     icon = 'misc_/EionetUsersEditor/users_editor.gif'
-
+    manage_options = PropertyManager.manage_options + (
+        {'label':'View', 'action':''},
+    ) + SimpleItem.manage_options
     _properties = (
         {'id':'ldap_server', 'type': 'string', 'mode':'w',
          'label': 'LDAP Server'},
     )
-
-    manage_options = PropertyManager.manage_options + SimpleItem.manage_options
+    security = ClassSecurityInfo()
 
     def __init__(self, id):
         self.id = id
@@ -602,30 +608,55 @@ class NewUsersEditor(SimpleItem, PropertyManager):
     def _get_ldap_agent(self):
         return LdapAgent(self.ldap_server)
 
+    standard_html_header = ""
+    standard_html_footer = ""
+    def _render_template(self, name, options):
+        tmpl = z3_tmpl(name)
+        zope2_wrapper = PageTemplateFile('zpt/zope2_wrapper.zpt', globals())
+        return zope2_wrapper.__of__(self)(body_html=tmpl(**options))
+
+    security.declareProtected(view, 'index_html')
+    def index_html(self, REQUEST):
+        """ view """
+        options = {
+            '_global': {'here': self}, # TODO: get rid of the 'here' reference
+            'base_url': self.absolute_url(),
+        }
+        options.update(_get_session_messages(REQUEST))
+        return self._render_template('zpt/index.zpt', options)
+
+    security.declareProtected(view, 'edit_account_html')
     def edit_account_html(self, REQUEST):
+        """ view """
         user_id = REQUEST.AUTHENTICATED_USER.getId()
         user_data = self._get_ldap_agent().user_info(user_id)
         options = {
             '_global': {'here': self},
             'form_data': user_data,
         }
-        return z3_tmpl('zpt/edit_account.zpt')(**options)
+        return self._render_template('zpt/edit_account.zpt', options)
 
+    security.declareProtected(view, 'edit_account')
     def edit_account(self, REQUEST):
+        """ view """
         form = REQUEST.form
         user_data = dict( (n, form.get(n, '')) for n in self._form_fields )
         self._get_ldap_agent().set_user_info(form['uid'], user_data)
         REQUEST.RESPONSE.redirect(self.absolute_url() + '/edit_account_html')
 
+    security.declareProtected(view, 'change_password_html')
     def change_password_html(self, REQUEST):
+        """ view """
         options = {
             '_global': {'here': self},
             'form_data': {'uid': REQUEST.AUTHENTICATED_USER.getId()},
         }
         options.update(_get_session_messages(REQUEST))
-        return z3_tmpl('zpt/change_password.zpt')(**options)
+        return self._render_template('zpt/change_password.zpt', options)
 
+    security.declareProtected(view, 'change_password')
     def change_password(self, REQUEST):
+        """ view """
         form = REQUEST.form
         user_id = REQUEST.AUTHENTICATED_USER.getId()
         agent = self._get_ldap_agent()
@@ -647,12 +678,16 @@ class NewUsersEditor(SimpleItem, PropertyManager):
         REQUEST.RESPONSE.redirect(self.absolute_url() +
                                   '/password_changed_html')
 
+    security.declareProtected(view, 'password_changed_html')
     def password_changed_html(self, REQUEST):
+        """ view """
         options = {
             '_global': {'here': self},
             'messages': ["Password changed successfully"],
         }
-        return z3_tmpl('zpt/result_page.zpt')(**options)
+        return self._render_template('zpt/result_page.zpt', options)
+
+InitializeClass(UsersEditor)
 
 def check_divert_mail():
     global check_divert_mail

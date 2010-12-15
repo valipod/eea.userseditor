@@ -1,0 +1,3 @@
+<metal:block use-macro="here/standard_template.pt/macros/page">
+<metal:block fill-slot="body" tal:content="structure options/body_html" />
+</metal:block>

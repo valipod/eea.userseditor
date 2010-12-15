@@ -1,7 +1,7 @@
 import unittest
 from datetime import datetime
 from mock import Mock, patch
-from eea.userseditor.users_editor import NewUsersEditor as UsersEditor
+from eea.userseditor.users_editor import UsersEditor
 
 def parse_html(html):
     from cStringIO import StringIO
@@ -19,16 +19,17 @@ user_data_fixture = {
     'telephone_number': '555 1234',
 }
 
-def stubbed_ui():
-    ui = UsersEditor('users')
-    ui.standard_html_header = "<html>"
-    ui.standard_html_footer = "</html>"
-    ui.absolute_url = Mock(return_value="URL")
-    return ui
+class StubbedUsersEditor(UsersEditor):
+    def _render_template(self, name, options):
+        from eea.userseditor.templates import z3_tmpl
+        return "<html>%s</html>" % z3_tmpl(name)(**options)
+
+    def absolute_url(self):
+        return "URL"
 
 class AccountUITest(unittest.TestCase):
     def setUp(self):
-        self.ui = stubbed_ui()
+        self.ui = StubbedUsersEditor('users')
         self.request = Mock()
         self.request.AUTHENTICATED_USER.getId.return_value = 'jsmith'
         self.request.SESSION = {}

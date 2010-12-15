@@ -27,13 +27,22 @@ class StubbedUsersEditor(UsersEditor):
     def absolute_url(self):
         return "URL"
 
+def mock_user(user_id, user_pw):
+    user = Mock()
+    user.getId.return_value = user_id
+    user.__ = user_pw
+    return user
+
+def mock_request():
+    request = Mock()
+    request.SESSION = {}
+    return request
+
 class AccountUITest(unittest.TestCase):
     def setUp(self):
         self.ui = StubbedUsersEditor('users')
-        self.request = Mock()
-        self.request.AUTHENTICATED_USER.getId.return_value = 'jsmith'
-        self.request.AUTHENTICATED_USER.__ = 'asdf'
-        self.request.SESSION = {}
+        self.request = mock_request()
+        self.request.AUTHENTICATED_USER = mock_user('jsmith', 'asdf')
 
     def test_edit_form(self):
         agent_mock = Mock()
@@ -146,3 +155,25 @@ class AccountUITest(unittest.TestCase):
         txt = lambda xp: page.xpath(xp)[0].text
         self.assertEqual(txt('//div[@class="error-msg"]'),
                          "New passwords do not match")
+
+class NotLoggedInTest(unittest.TestCase):
+    def setUp(self):
+        self.ui = StubbedUsersEditor('users')
+        self.request = mock_request()
+        self.request.AUTHENTICATED_USER = mock_user(None, '')
+
+    def _assert_error_msg_on_index(self):
+        page = parse_html(self.ui.index_html(self.request))
+        txt = lambda xp: page.xpath(xp)[0].text
+        self.assertEqual(txt('//div[@class="error-msg"]'),
+                         "You must be logged in to edit your profile.")
+
+    def test_edit_form(self):
+        self.ui.edit_account_html(self.request)
+        self.request.RESPONSE.redirect.assert_called_with('URL/')
+        self._assert_error_msg_on_index()
+
+    def test_password_form(self):
+        self.ui.change_password_html(self.request)
+        self.request.RESPONSE.redirect.assert_called_with('URL/')
+        self._assert_error_msg_on_index()

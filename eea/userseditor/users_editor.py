@@ -592,6 +592,12 @@ def _get_user_password(request):
 def _get_user_id(request):
     return request.AUTHENTICATED_USER.getId()
 
+def _is_logged_in(request):
+    if _get_user_id(request) is None:
+        return False
+    else:
+        return True
+
 class UsersEditor(SimpleItem, PropertyManager):
     meta_type = 'Eionet Users Editor'
     icon = 'misc_/EionetUsersEditor/users_editor.gif'
@@ -634,6 +640,11 @@ class UsersEditor(SimpleItem, PropertyManager):
     security.declareProtected(view, 'edit_account_html')
     def edit_account_html(self, REQUEST):
         """ view """
+        if not _is_logged_in(REQUEST):
+            _set_session_message(REQUEST, 'error',
+                                 "You must be logged in to edit your profile.")
+            return REQUEST.RESPONSE.redirect(self.absolute_url() + '/')
+
         user_id = _get_user_id(REQUEST)
         user_data = self._get_ldap_agent().user_info(user_id)
         options = {
@@ -656,6 +667,11 @@ class UsersEditor(SimpleItem, PropertyManager):
     security.declareProtected(view, 'change_password_html')
     def change_password_html(self, REQUEST):
         """ view """
+        if not _is_logged_in(REQUEST):
+            _set_session_message(REQUEST, 'error',
+                                 "You must be logged in to edit your profile.")
+            return REQUEST.RESPONSE.redirect(self.absolute_url() + '/')
+
         options = {
             '_global': {'here': self},
             'form_data': {'uid': _get_user_id(REQUEST)},

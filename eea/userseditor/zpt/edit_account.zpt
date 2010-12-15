@@ -10,8 +10,6 @@
 <h1>Modify Eionet account</h1>
 
 <form action="edit_account" method="post" tal:define="data options/form_data">
-    <input id="uid" type="hidden" name="uid" tal:attributes="value data/uid" />
-
     <label for="email">E-mail:</label>
     <input id="email" type="text" name="email" size="50"
            tal:attributes="value data/email" />

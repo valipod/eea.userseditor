@@ -12,8 +12,13 @@ from AccessControl.SecurityManagement import noSecurityManager
 from AccessControl.unauthorized import Unauthorized
 from Products.MailHost.MailHost import MailHost
 
+from persistent.list import PersistentList
+from persistent.mapping import PersistentMapping
+
 # Product imports
 from Products.LDAPUserFolder import LDAPUserFolder, utils as ldap_utils
+
+from templates import z3_tmpl
 
 def random_sha_b64():
     from sha import sha
@@ -559,6 +564,82 @@ class UsersEditor(SimpleItem):
             return result
 
 InitializeClass(UsersEditor)
+
+SESSION_MESSAGES = 'eea.userseditor.messages'
+
+def _get_session_messages(request):
+    session = request.SESSION
+    # TODO: does this work with a real session?
+    return session.pop(SESSION_MESSAGES, {})
+
+def _set_session_message(request, msg_type, msg):
+    session = request.SESSION
+    if SESSION_MESSAGES not in session.keys():
+        session[SESSION_MESSAGES] = PersistentMapping()
+    # TODO: allow for more than one message of each type
+    session[SESSION_MESSAGES][msg_type] = msg
+
+class NewUsersEditor(SimpleItem):
+    def __init__(self, id):
+        self.id = id
+
+    _form_fields = ['uid', 'email', 'organisation', 'uri',
+                    'postal_address', 'telephone_number']
+
+    def _get_ldap_agent(self):
+        raise NotImplementedError
+
+    def edit_account_html(self, REQUEST):
+        user_id = REQUEST.AUTHENTICATED_USER.getId()
+        user_data = self._get_ldap_agent().user_info(user_id)
+        options = {
+            '_global': {'here': self},
+            'form_data': user_data,
+        }
+        return z3_tmpl('zpt/edit_account.zpt')(**options)
+
+    def edit_account(self, REQUEST):
+        form = REQUEST.form
+        user_data = dict( (n, form.get(n, '')) for n in self._form_fields )
+        self._get_ldap_agent().set_user_info(form['uid'], user_data)
+        REQUEST.RESPONSE.redirect(self.absolute_url() + '/edit_account_html')
+
+    def change_password_html(self, REQUEST):
+        options = {
+            '_global': {'here': self},
+            'form_data': {'uid': REQUEST.AUTHENTICATED_USER.getId()},
+        }
+        options.update(_get_session_messages(REQUEST))
+        return z3_tmpl('zpt/change_password.zpt')(**options)
+
+    def change_password(self, REQUEST):
+        form = REQUEST.form
+        user_id = REQUEST.AUTHENTICATED_USER.getId()
+        agent = self._get_ldap_agent()
+
+        try:
+            agent.perform_bind()
+        except ValueError:
+            _set_session_message(REQUEST, 'error', "Old password is wrong")
+            return REQUEST.RESPONSE.redirect(self.absolute_url() +
+                                             '/change_password_html')
+
+        if form['new_password'] != form['new_password_confirm']:
+            _set_session_message(REQUEST, 'error',
+                                 "New passwords do not match")
+            return REQUEST.RESPONSE.redirect(self.absolute_url() +
+                                             '/change_password_html')
+
+        agent.set_user_password(user_id, form['new_password'])
+        REQUEST.RESPONSE.redirect(self.absolute_url() +
+                                  '/password_changed_html')
+
+    def password_changed_html(self, REQUEST):
+        options = {
+            '_global': {'here': self},
+            'messages': ["Password changed successfully"],
+        }
+        return z3_tmpl('zpt/result_page.zpt')(**options)
 
 def check_divert_mail():
     global check_divert_mail

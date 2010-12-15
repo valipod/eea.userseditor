@@ -2,6 +2,8 @@
 Functional tests depend on code in `eea.roleseditor` to avoid duplication.
 """
 
+from nose import SkipTest; raise SkipTest
+
 import unittest
 import re
 

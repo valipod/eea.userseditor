@@ -66,10 +66,14 @@ class LdapAgent(object):
     def bind(self, user_id, user_pw):
         try:
             result = self.conn.simple_bind_s(self._user_dn(user_id), user_pw)
-        except ldap.INVALID_CREDENTIALS:
-            raise ValueError("Invalid username or password")
+        except (ldap.INVALID_CREDENTIALS,
+                ldap.UNWILLING_TO_PERFORM):
+            raise ValueError("Authentication failure")
         assert result == (ldap.RES_BIND, [])
 
-    def set_user_password(self, user_id, new_pw):
-        result = self.conn.passwd_s(self._user_dn(user_id), new_pw)
-        assert result == (ldap.RES_MODIFY, [])
+    def set_user_password(self, user_id, old_pw, new_pw):
+        try:
+            result = self.conn.passwd_s(self._user_dn(user_id), old_pw, new_pw)
+        except ldap.UNWILLING_TO_PERFORM:
+            raise ValueError("Authentication failure")
+        assert result == (ldap.RES_EXTENDED, [])

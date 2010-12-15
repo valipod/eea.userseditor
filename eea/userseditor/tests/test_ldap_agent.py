@@ -65,10 +65,19 @@ class LdapAgentTest(unittest.TestCase):
             'uid=jsmith,ou=Users,o=EIONET,l=Europe', 'some_pw')
 
     def test_set_user_password(self):
-        self.mock_conn.passwd_s.return_value = (ldap.RES_MODIFY, [])
-        self.agent.set_user_password('jsmith', 'some_new_pw')
+        self.mock_conn.passwd_s.return_value = (ldap.RES_EXTENDED, [])
+        self.agent.set_user_password('jsmith', 'the_old_pw', 'some_new_pw')
         self.mock_conn.passwd_s.assert_called_once_with(
-            'uid=jsmith,ou=Users,o=EIONET,l=Europe', 'some_new_pw')
+            'uid=jsmith,ou=Users,o=EIONET,l=Europe',
+            'the_old_pw', 'some_new_pw')
+
+    def test_set_user_password_failure(self):
+        self.mock_conn.passwd_s.side_effect = ldap.UNWILLING_TO_PERFORM
+        self.assertRaises(ValueError, self.agent.set_user_password,
+                          'jsmith', 'bad_old_pw', 'some_new_pw')
+        self.mock_conn.passwd_s.assert_called_once_with(
+            'uid=jsmith,ou=Users,o=EIONET,l=Europe',
+            'bad_old_pw', 'some_new_pw')
 
 
 user_data_fixture = {

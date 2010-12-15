@@ -586,6 +586,12 @@ def _set_session_message(request, msg_type, msg):
     # TODO: allow for more than one message of each type
     session[SESSION_MESSAGES][msg_type] = msg
 
+def _get_user_password(request):
+    return request.AUTHENTICATED_USER.__
+
+def _get_user_id(request):
+    return request.AUTHENTICATED_USER.getId()
+
 class UsersEditor(SimpleItem, PropertyManager):
     meta_type = 'Eionet Users Editor'
     icon = 'misc_/EionetUsersEditor/users_editor.gif'
@@ -628,7 +634,7 @@ class UsersEditor(SimpleItem, PropertyManager):
     security.declareProtected(view, 'edit_account_html')
     def edit_account_html(self, REQUEST):
         """ view """
-        user_id = REQUEST.AUTHENTICATED_USER.getId()
+        user_id = _get_user_id(REQUEST)
         user_data = self._get_ldap_agent().user_info(user_id)
         options = {
             '_global': {'here': self},
@@ -639,9 +645,12 @@ class UsersEditor(SimpleItem, PropertyManager):
     security.declareProtected(view, 'edit_account')
     def edit_account(self, REQUEST):
         """ view """
+        user_id = _get_user_id(REQUEST)
         form = REQUEST.form
         user_data = dict( (n, form.get(n, '')) for n in self._form_fields )
-        self._get_ldap_agent().set_user_info(form['uid'], user_data)
+        agent = self._get_ldap_agent()
+        agent.bind(user_id, _get_user_password(REQUEST))
+        agent.set_user_info(form['uid'], user_data)
         REQUEST.RESPONSE.redirect(self.absolute_url() + '/edit_account_html')
 
     security.declareProtected(view, 'change_password_html')
@@ -649,7 +658,7 @@ class UsersEditor(SimpleItem, PropertyManager):
         """ view """
         options = {
             '_global': {'here': self},
-            'form_data': {'uid': REQUEST.AUTHENTICATED_USER.getId()},
+            'form_data': {'uid': _get_user_id(REQUEST)},
         }
         options.update(_get_session_messages(REQUEST))
         return self._render_template('zpt/change_password.zpt', options)
@@ -658,15 +667,8 @@ class UsersEditor(SimpleItem, PropertyManager):
     def change_password(self, REQUEST):
         """ view """
         form = REQUEST.form
-        user_id = REQUEST.AUTHENTICATED_USER.getId()
+        user_id = _get_user_id(REQUEST)
         agent = self._get_ldap_agent()
-
-        try:
-            agent.perform_bind()
-        except ValueError:
-            _set_session_message(REQUEST, 'error', "Old password is wrong")
-            return REQUEST.RESPONSE.redirect(self.absolute_url() +
-                                             '/change_password_html')
 
         if form['new_password'] != form['new_password_confirm']:
             _set_session_message(REQUEST, 'error',
@@ -674,7 +676,15 @@ class UsersEditor(SimpleItem, PropertyManager):
             return REQUEST.RESPONSE.redirect(self.absolute_url() +
                                              '/change_password_html')
 
-        agent.set_user_password(user_id, form['new_password'])
+        try:
+            agent.bind(user_id, form['old_password'])
+            agent.set_user_password(user_id, form['old_password'],
+                                             form['new_password'])
+        except ValueError:
+            _set_session_message(REQUEST, 'error', "Old password is wrong")
+            return REQUEST.RESPONSE.redirect(self.absolute_url() +
+                                             '/change_password_html')
+
         REQUEST.RESPONSE.redirect(self.absolute_url() +
                                   '/password_changed_html')
 
@@ -683,7 +693,8 @@ class UsersEditor(SimpleItem, PropertyManager):
         """ view """
         options = {
             '_global': {'here': self},
-            'messages': ["Password changed successfully"],
+            'messages': [
+                "Password changed successfully. You must log in again."],
         }
         return self._render_template('zpt/result_page.zpt', options)
 

@@ -32,6 +32,7 @@ class AccountUITest(unittest.TestCase):
         self.ui = StubbedUsersEditor('users')
         self.request = Mock()
         self.request.AUTHENTICATED_USER.getId.return_value = 'jsmith'
+        self.request.AUTHENTICATED_USER.__ = 'asdf'
         self.request.SESSION = {}
 
     def test_edit_form(self):
@@ -59,6 +60,7 @@ class AccountUITest(unittest.TestCase):
 
         self.ui.edit_account(self.request)
 
+        agent_mock.bind.assert_called_with('jsmith', 'asdf')
         self.request.RESPONSE.redirect.assert_called_with(
                 'URL/edit_account_html')
         agent_mock.set_user_info.assert_called_with('jsmith',
@@ -89,27 +91,31 @@ class AccountUITest(unittest.TestCase):
 
         self.ui.change_password(self.request)
 
-        agent_mock.set_user_password.assert_called_with('jsmith', "zxcv")
+        agent_mock.bind.assert_called_with('jsmith', 'asdf')
+        agent_mock.set_user_password.assert_called_with('jsmith',
+                                                        "asdf", "zxcv")
         self.request.RESPONSE.redirect.assert_called_with(
                 'URL/password_changed_html')
 
         page = parse_html(self.ui.password_changed_html(self.request))
 
         txt = lambda xp: page.xpath(xp)[0].text
-        self.assertEqual(txt('//p').strip(), "Password changed successfully")
+        self.assertEqual(txt('//p').strip(),
+                 "Password changed successfully. You must log in again.")
 
     def test_submit_new_password_bad_old_password(self):
         self.request.form = {
-            'old_password': "asdf",
+            'old_password': "qwer",
             'new_password': "zxcv",
             'new_password_confirm': "zxcv",
         }
         agent_mock = Mock()
-        agent_mock.perform_bind.side_effect = ValueError
+        agent_mock.bind.side_effect = ValueError
         self.ui._get_ldap_agent = Mock(return_value=agent_mock)
 
         self.ui.change_password(self.request)
 
+        agent_mock.bind.assert_called_with('jsmith', 'qwer')
         assert agent_mock.set_user_password.call_count == 0
         self.request.RESPONSE.redirect.assert_called_with(
                 'URL/change_password_html')

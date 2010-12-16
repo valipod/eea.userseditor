@@ -1,7 +1,9 @@
 import ldap
 
 user_attr_map = {
-    'name': 'cn',
+    'first_name': 'givenName',
+    'last_name': 'sn',
+    'full_name': 'cn',
     'email': 'mail',
     'telephone_number': 'telephoneNumber',
     'organisation': 'o',
@@ -10,7 +12,8 @@ user_attr_map = {
     'uri': 'labeledURI',
 }
 
-editable_field_names = ['name', 'email', 'organisation', 'uri',
+editable_field_names = ['first_name', 'last_name',
+                        'email', 'organisation', 'uri',
                         'postal_address', 'telephone_number']
 
 class LdapAgent(object):
@@ -30,13 +33,13 @@ class LdapAgent(object):
         return 'uid=' + user_id + ',' + self._user_dn_suffix
 
     def _unpack_user_info(self, dn, attr):
-        #out = {'dn': dn, 'id': self._user_id(dn)}
         out = {}
         for name, ldap_name in user_attr_map.iteritems():
             if ldap_name in attr:
+                assert len(attr[ldap_name]) == 1
                 out[name] = attr[ldap_name][0].decode(self._encoding)
             else:
-                out[name] = None
+                out[name] = ''
         return out
 
     def user_info(self, user_id):
@@ -49,18 +52,44 @@ class LdapAgent(object):
         assert dn == query_dn
         return self._unpack_user_info(dn, attr)
 
-    def set_user_info(self, user_id, new_info):
-        assert set(new_info.keys()) == set(editable_field_names)
+    def _user_info_diff(self, old_info, new_info):
+        modify_statements = []
+        def do(*args):
+            modify_statements.append(args)
 
-        modify_statemens = []
-        for name in editable_field_names:
-            # TODO: some values may be missing in LDAP
-            stmt = (ldap.MOD_REPLACE,
-                    user_attr_map[name], [new_info.get(name, '')])
-            modify_statemens.append(stmt)
+        def pack(value):
+            return [value.encode(self._encoding)]
+
+        new_info = dict(new_info)
+        new_info['full_name'] = '%s %s' % (new_info['first_name'],
+                                           new_info['last_name'])
+        for name in editable_field_names + ['full_name']:
+            old_value = old_info[name]
+            new_value = new_info[name]
+            ldap_name = user_attr_map[name]
+
+            if old_value == new_value == '':
+                pass
+
+            elif old_value == '':
+                do(ldap.MOD_ADD, ldap_name, pack(new_value))
+
+            elif new_value == '':
+                do(ldap.MOD_DELETE, ldap_name, pack(old_value))
+
+            elif old_value != new_value:
+                do(ldap.MOD_REPLACE, ldap_name, pack(new_value))
+
+        return modify_statements
+
+    def set_user_info(self, user_id, new_info):
+        old_info = self.user_info(user_id)
+        modify_statements = self._user_info_diff(old_info, new_info)
+        if not modify_statements:
+            return
 
         result = self.conn.modify_s(self._user_dn(user_id),
-                                    tuple(modify_statemens))
+                                    tuple(modify_statements))
         assert result == (ldap.RES_MODIFY, [])
 
     def bind(self, user_id, user_pw):

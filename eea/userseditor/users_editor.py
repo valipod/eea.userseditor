@@ -8,7 +8,7 @@ from AccessControl.Permissions import view
 from persistent.list import PersistentList
 from persistent.mapping import PersistentMapping
 
-from ldap_agent import LdapAgent
+from ldap_agent import LdapAgent, editable_field_names
 from templates import z3_tmpl
 
 SESSION_MESSAGES = 'eea.userseditor.messages'
@@ -64,9 +64,6 @@ class UsersEditor(SimpleItem, PropertyManager):
         self.id = id
         self.ldap_server = ""
 
-    _form_fields = ['uid', 'email', 'organisation', 'uri',
-                    'postal_address', 'telephone_number']
-
     def _get_ldap_agent(self):
         return LdapAgent(self.ldap_server)
 
@@ -108,10 +105,14 @@ class UsersEditor(SimpleItem, PropertyManager):
         """ view """
         user_id = _get_user_id(REQUEST)
         form = REQUEST.form
-        user_data = dict( (n, form.get(n, '')) for n in self._form_fields )
+        user_data = {}
+        for name in editable_field_names:
+            value = form.get(name, u'')
+            assert isinstance(value, unicode), repr( (name, value) )
+            user_data[name] = value
         agent = self._get_ldap_agent()
         agent.bind(user_id, _get_user_password(REQUEST))
-        agent.set_user_info(form['uid'], user_data)
+        agent.set_user_info(user_id, user_data)
         REQUEST.RESPONSE.redirect(self.absolute_url() + '/edit_account_html')
 
     security.declareProtected(view, 'change_password_html')
@@ -124,7 +125,7 @@ class UsersEditor(SimpleItem, PropertyManager):
 
         options = {
             '_global': {'here': self},
-            'form_data': {'uid': _get_user_id(REQUEST)},
+            'user_id': _get_user_id(REQUEST),
         }
         options.update(_get_session_messages(REQUEST))
         return self._render_template('zpt/change_password.zpt', options)

@@ -10,19 +10,29 @@
 <h1>Modify Eionet account</h1>
 
 <form action="edit_account" method="post" tal:define="data options/form_data">
+    <label for="email">First name:</label>
+    <input id="email" type="text" name="first_name:utf8:ustring" size="50"
+           tal:attributes="value data/first_name" />
+    <br />
+
+    <label for="email">Last name:</label>
+    <input id="email" type="text" name="last_name:utf8:ustring" size="50"
+           tal:attributes="value data/last_name" />
+    <br />
+
     <label for="email">E-mail:</label>
-    <input id="email" type="text" name="email" size="50"
+    <input id="email" type="text" name="email:utf8:ustring" size="50"
            tal:attributes="value data/email" />
     <br />
 
-    <label for="uri">URL:</label>
-    <input id="uri" type="text" name="uri" size="50"
-           tal:attributes="value data/uri" />
+    <label for="uri">Organisation:</label>
+    <input id="uri" type="text" name="organisation:utf8:ustring" size="50"
+           tal:attributes="value data/organisation" />
     <br />
 
-    <label for="organisation">Organisation:</label>
-    <input id="organisation" type="text" name="organisation:utf8:ustring"
-           size="50" tal:attributes="value data/organisation" />
+    <label for="uri">URL:</label>
+    <input id="uri" type="text" name="uri:utf8:ustring" size="50"
+           tal:attributes="value data/uri" />
     <br />
 
     <label for="postal_address">Postal address:</label>
@@ -31,7 +41,8 @@
     <br />
 
     <label for="telephone_number">Telephone number:</label>
-    <input id="telephone_number" type="text" name="telephone_number" size="50"
+    <input id="telephone_number" type="text"
+           name="telephone_number:utf8:ustring" size="50"
            tal:attributes="value data/telephone_number" />
     <br />
 

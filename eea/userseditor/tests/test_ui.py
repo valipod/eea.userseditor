@@ -11,9 +11,9 @@ def parse_html(html):
 from test_ldap_agent import user_data_fixture
 
 class StubbedUsersEditor(UsersEditor):
-    def _render_template(self, name, options):
-        from eea.userseditor.templates import z3_tmpl
-        return "<html>%s</html>" % z3_tmpl(name)(**options)
+    def _render_template(self, name, **options):
+        from eea.userseditor.users_editor import load_template
+        return "<html>%s</html>" % load_template(name)(**options)
 
     def absolute_url(self):
         return "URL"

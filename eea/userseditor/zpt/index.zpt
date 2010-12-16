@@ -1,5 +1,3 @@
-<tal:block replace="structure here/standard_html_header" />
-
 <h1>Eionet account pages</h1>
 
 <div class="error-msg"
@@ -13,5 +11,3 @@
    >Edit account</a>
 <a tal:attributes="href string:${options/base_url}/change_password_html"
    >Change password</a>
-
-<tal:block replace="structure here/standard_html_footer" />

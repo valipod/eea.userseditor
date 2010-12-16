@@ -9,7 +9,7 @@ from persistent.list import PersistentList
 from persistent.mapping import PersistentMapping
 
 from ldap_agent import LdapAgent, editable_field_names
-from templates import z3_tmpl
+
 
 SESSION_MESSAGES = 'eea.userseditor.messages'
 
@@ -23,7 +23,7 @@ def manage_addUsersEditor(parent, id, REQUEST=None):
 def _get_session_messages(request):
     session = request.SESSION
     if SESSION_MESSAGES in session.keys():
-        msgs = session[SESSION_MESSAGES]
+        msgs = dict(session[SESSION_MESSAGES])
         del session[SESSION_MESSAGES]
     else:
         msgs = {}
@@ -48,6 +48,13 @@ def _is_logged_in(request):
     else:
         return True
 
+def load_template(name, _memo={}):
+    if name not in _memo:
+        from zope.pagetemplate.pagetemplatefile import PageTemplateFile
+        _memo[name] = PageTemplateFile(name, globals())
+    return _memo[name]
+
+
 class UsersEditor(SimpleItem, PropertyManager):
     meta_type = 'Eionet Users Editor'
     icon = 'misc_/EionetUsersEditor/users_editor.gif'
@@ -67,22 +74,18 @@ class UsersEditor(SimpleItem, PropertyManager):
     def _get_ldap_agent(self):
         return LdapAgent(self.ldap_server)
 
-    standard_html_header = ""
-    standard_html_footer = ""
-    def _render_template(self, name, options):
-        tmpl = z3_tmpl(name)
-        zope2_wrapper = PageTemplateFile('zpt/zope2_wrapper.zpt', globals())
-        return zope2_wrapper.__of__(self)(body_html=tmpl(**options))
+    _zope2_wrapper = PageTemplateFile('zpt/zope2_wrapper.zpt', globals())
+
+    def _render_template(self, name, **options):
+        tmpl = load_template(name)
+        return self._zope2_wrapper(body_html=tmpl(**options))
 
     security.declareProtected(view, 'index_html')
     def index_html(self, REQUEST):
         """ view """
-        options = {
-            '_global': {'here': self}, # TODO: get rid of the 'here' reference
-            'base_url': self.absolute_url(),
-        }
-        options.update(_get_session_messages(REQUEST))
-        return self._render_template('zpt/index.zpt', options)
+        return self._render_template('zpt/index.zpt',
+                                     base_url=self.absolute_url(),
+                                     **_get_session_messages(REQUEST))
 
     security.declareProtected(view, 'edit_account_html')
     def edit_account_html(self, REQUEST):
@@ -94,11 +97,8 @@ class UsersEditor(SimpleItem, PropertyManager):
 
         user_id = _get_user_id(REQUEST)
         user_data = self._get_ldap_agent().user_info(user_id)
-        options = {
-            '_global': {'here': self},
-            'form_data': user_data,
-        }
-        return self._render_template('zpt/edit_account.zpt', options)
+        return self._render_template('zpt/edit_account.zpt',
+                                     form_data=user_data)
 
     security.declareProtected(view, 'edit_account')
     def edit_account(self, REQUEST):
@@ -123,12 +123,9 @@ class UsersEditor(SimpleItem, PropertyManager):
                                  "You must be logged in to edit your profile.")
             return REQUEST.RESPONSE.redirect(self.absolute_url() + '/')
 
-        options = {
-            '_global': {'here': self},
-            'user_id': _get_user_id(REQUEST),
-        }
-        options.update(_get_session_messages(REQUEST))
-        return self._render_template('zpt/change_password.zpt', options)
+        return self._render_template('zpt/change_password.zpt',
+                                     user_id=_get_user_id(REQUEST),
+                                     **_get_session_messages(REQUEST))
 
     security.declareProtected(view, 'change_password')
     def change_password(self, REQUEST):
@@ -158,11 +155,8 @@ class UsersEditor(SimpleItem, PropertyManager):
     security.declareProtected(view, 'password_changed_html')
     def password_changed_html(self, REQUEST):
         """ view """
-        options = {
-            '_global': {'here': self},
-            'messages': [
-                "Password changed successfully. You must log in again."],
-        }
-        return self._render_template('zpt/result_page.zpt', options)
+        return self._render_template('zpt/result_page.zpt', messages=[
+            "Password changed successfully. You must log in again.",
+        ])
 
 InitializeClass(UsersEditor)

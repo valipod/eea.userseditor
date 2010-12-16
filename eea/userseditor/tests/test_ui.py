@@ -63,7 +63,9 @@ class AccountUITest(unittest.TestCase):
                              '//input[@name="telephone_number:utf8:ustring"]'),
                          user_data_fixture['telephone_number'])
 
-    def test_submit_edit(self):
+    @patch('eea.userseditor.users_editor.datetime')
+    def test_submit_edit(self, mock_datetime):
+        mock_datetime.now.return_value = datetime(2010, 12, 16, 13, 45, 21)
         self.request.form = dict(user_data_fixture)
         agent_mock = Mock()
         self.ui._get_ldap_agent = Mock(return_value=agent_mock)
@@ -75,6 +77,11 @@ class AccountUITest(unittest.TestCase):
                 'URL/edit_account_html')
         agent_mock.set_user_info.assert_called_with('jsmith',
                                                     user_data_fixture)
+
+        page = parse_html(self.ui.edit_account_html(self.request))
+        txt = lambda xp: page.xpath(xp)[0].text.strip()
+        self.assertEqual(txt('//div[@class="system-msg"]'),
+                         "Profile saved (2010-12-16 13:45:21)")
 
     def test_password_form(self):
         page = parse_html(self.ui.change_password_html(self.request))

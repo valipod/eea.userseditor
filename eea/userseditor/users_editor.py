@@ -1,3 +1,4 @@
+from datetime import datetime
 from AccessControl import ClassSecurityInfo
 from Globals import InitializeClass
 from Products.PageTemplates.PageTemplateFile import PageTemplateFile
@@ -98,7 +99,8 @@ class UsersEditor(SimpleItem, PropertyManager):
         user_id = _get_user_id(REQUEST)
         user_data = self._get_ldap_agent().user_info(user_id)
         return self._render_template('zpt/edit_account.zpt',
-                                     form_data=user_data)
+                                     form_data=user_data,
+                                     **_get_session_messages(REQUEST))
 
     security.declareProtected(view, 'edit_account')
     def edit_account(self, REQUEST):
@@ -113,6 +115,8 @@ class UsersEditor(SimpleItem, PropertyManager):
         agent = self._get_ldap_agent()
         agent.bind(user_id, _get_user_password(REQUEST))
         agent.set_user_info(user_id, user_data)
+        when = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        _set_session_message(REQUEST, 'message', "Profile saved (%s)" % when)
         REQUEST.RESPONSE.redirect(self.absolute_url() + '/edit_account_html')
 
     security.declareProtected(view, 'change_password_html')

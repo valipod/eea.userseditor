@@ -84,9 +84,17 @@ class UsersEditor(SimpleItem, PropertyManager):
     security.declareProtected(view, 'index_html')
     def index_html(self, REQUEST):
         """ view """
-        return self._render_template('zpt/index.zpt',
-                                     base_url=self.absolute_url(),
-                                     **_get_session_messages(REQUEST))
+        options = {
+            'base_url': self.absolute_url(),
+        }
+        if _is_logged_in(REQUEST):
+            agent = self._get_ldap_agent()
+            user_id = _get_user_id(REQUEST)
+            options['user_info'] = agent.user_info(user_id)
+            if options['user_info']['organisation'][0] == ORG_BY_ID:
+                options['all_organisations'] = agent.all_organisations()
+        options.update(_get_session_messages(REQUEST))
+        return self._render_template('zpt/index.zpt', **options)
 
     security.declareProtected(view, 'edit_account_html')
     def edit_account_html(self, REQUEST):
@@ -101,6 +109,7 @@ class UsersEditor(SimpleItem, PropertyManager):
         all_orgs = agent.all_organisations()
         sort_key = lambda org_id: all_orgs[org_id].strip().lower()
         options = {
+            'base_url': self.absolute_url(),
             'form_data': agent.user_info(user_id),
             'all_organisations': all_orgs,
             'sorted_org_ids': sorted(all_orgs, key=sort_key),
@@ -148,6 +157,7 @@ class UsersEditor(SimpleItem, PropertyManager):
 
         return self._render_template('zpt/change_password.zpt',
                                      user_id=_get_user_id(REQUEST),
+                                     base_url=self.absolute_url(),
                                      **_get_session_messages(REQUEST))
 
     security.declareProtected(view, 'change_password')
@@ -178,8 +188,11 @@ class UsersEditor(SimpleItem, PropertyManager):
     security.declareProtected(view, 'password_changed_html')
     def password_changed_html(self, REQUEST):
         """ view """
-        return self._render_template('zpt/result_page.zpt', messages=[
-            "Password changed successfully. You must log in again.",
-        ])
+        options = {
+            'messages': [
+                "Password changed successfully. You must log in again."],
+            'base_url': self.absolute_url(),
+        }
+        return self._render_template('zpt/result_page.zpt', **options)
 
 InitializeClass(UsersEditor)

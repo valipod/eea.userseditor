@@ -1,9 +1,15 @@
-<p tal:repeat="error python:options.get('errors', [])">
-    <tal:block content="structure error" />
-</p>
+<h1>Eionet account pages</h1>
 
-<p tal:repeat="message python:options.get('messages', [])">
-    <tal:block content="structure message" />
+<div class="error-msg"
+     tal:repeat="message python:options.get('errors', [])"
+     tal:content="structure message" />
+
+<div class="system-msg"
+     tal:repeat="message python:options.get('messages', [])"
+     tal:content="structure message" />
+
+<p>
+    [<a tal:attributes="href string:${options/base_url}/">back</a>]
 </p>
 
 <p tal:define="next python:options.get('next', None)" tal:condition="next">

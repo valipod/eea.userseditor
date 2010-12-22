@@ -104,7 +104,7 @@ class AccountUITest(unittest.TestCase):
         txt = lambda xp: page.xpath(xp)[0].text.strip()
         exists = lambda xp: len(page.xpath(xp)) > 0
         self.assertEqual(txt('//h1'), "Change Eionet account password")
-        self.assertEqual(txt('//form/p'), "You are logged in as \"jsmith\".")
+        self.assertEqual(txt('//p/tt'), "jsmith")
         self.assertTrue(exists('//form//input[@type="password"]'
                                             '[@name="old_password"]'))
         self.assertTrue(exists('//form//input[@type="password"]'
@@ -130,7 +130,7 @@ class AccountUITest(unittest.TestCase):
         page = parse_html(self.ui.password_changed_html(self.request))
 
         txt = lambda xp: page.xpath(xp)[0].text.strip()
-        self.assertEqual(txt('//p').strip(),
+        self.assertEqual(txt('//div[@class="system-msg"]'),
                  "Password changed successfully. You must log in again.")
 
     def test_submit_new_password_bad_old_password(self):

@@ -7,7 +7,58 @@
      tal:condition="python:options.get('message', False)"
      tal:content="options/message" />
 
-<a tal:attributes="href string:${options/base_url}/edit_account_html"
-   >Edit account</a>
-<a tal:attributes="href string:${options/base_url}/change_password_html"
-   >Change password</a>
+<p>
+    [<a tal:attributes="href string:${options/base_url}/edit_account_html"
+       >edit account</a>]
+    [<a tal:attributes="href string:${options/base_url}/change_password_html"
+       >change password</a>]
+</p>
+
+<tal:block define="data options/user_info|nothing" condition="data">
+
+<p>Your account information:</p>
+
+<table>
+  <tr>
+    <td>First name:</td>
+    <td tal:content="data/first_name" />
+  </tr>
+
+  <tr>
+    <td>Last name:</td>
+    <td tal:content="data/last_name" />
+  </tr>
+
+  <tr>
+    <td>E-mail:</td>
+    <td tal:content="data/email" />
+  </tr>
+
+  <tr>
+    <td>URL:</td>
+    <td tal:content="data/uri" />
+  </tr>
+
+  <tr>
+    <td>Postal address:</td>
+    <td tal:content="data/postal_address" />
+  </tr>
+
+  <tr>
+    <td>Telephone number:</td>
+    <td tal:content="data/telephone_number" />
+  </tr>
+
+  <tr>
+    <td>Organisation:</td>
+    <tal:block define="org_type python:data['organisation'][0];
+                       org_value python:data['organisation'][1]">
+      <td tal:condition="python:org_type == 'literal'"
+          tal:content="org_value" />
+      <td tal:condition="python:org_type == 'by_id'"
+          tal:content="python:options['all_organisations'][org_value]" />
+    </tal:block>
+  </tr>
+</table>
+
+</tal:block>

@@ -4,6 +4,7 @@ import re
 from lxml.html.soupparser import fromstring
 from mock import Mock, patch
 from eea.userseditor.users_editor import UsersEditor
+from eea.userseditor.ldap_agent import ORG_LITERAL, ORG_BY_ID
 
 def parse_html(html):
     return fromstring(re.sub(r'\s+', ' ', html))
@@ -12,11 +13,22 @@ user_data_fixture = {
     'first_name': u"Joe",
     'last_name': u"Smith",
     'email': u"jsmith@example.com",
-    'organisation': u"Smithy Factory",
     'uri': u"http://example.com/~jsmith",
     'postal_address': u"13 Smithsonian Way, Copenhagen, DK",
     'telephone_number': u"555 1234",
+    'organisation': (ORG_LITERAL, u"My company"),
 }
+
+class MockLdapAgent(Mock):
+    def __init__(self, *args, **kwargs):
+        super(MockLdapAgent, self).__init__(*args, **kwargs)
+        self._user_info = dict(user_data_fixture)
+
+    def user_info(self, user_id):
+        return self._user_info
+
+    def all_organisations(self):
+        return {}
 
 
 class StubbedUsersEditor(UsersEditor):
@@ -43,12 +55,10 @@ class AccountUITest(unittest.TestCase):
         self.ui = StubbedUsersEditor('users')
         self.request = mock_request()
         self.request.AUTHENTICATED_USER = mock_user('jsmith', 'asdf')
+        self.mock_agent = MockLdapAgent()
+        self.ui._get_ldap_agent = Mock(return_value=self.mock_agent)
 
     def test_edit_form(self):
-        agent_mock = Mock()
-        agent_mock.user_info.return_value = dict(user_data_fixture)
-        self.ui._get_ldap_agent = Mock(return_value=agent_mock)
-
         page = parse_html(self.ui.edit_account_html(self.request))
 
         txt = lambda xp: page.xpath(xp)[0].text.strip()
@@ -60,9 +70,6 @@ class AccountUITest(unittest.TestCase):
                          user_data_fixture['last_name'])
         self.assertEqual(val('//form//input[@name="email:utf8:ustring"]'),
                          user_data_fixture['email'])
-        self.assertEqual(val('//form'
-                             '//input[@name="organisation:utf8:ustring"]'),
-                         user_data_fixture['organisation'])
         self.assertEqual(val('//form//input[@name="uri:utf8:ustring"]'),
                          user_data_fixture['uri'])
         self.assertEqual(txt('//form//textarea'
@@ -76,16 +83,15 @@ class AccountUITest(unittest.TestCase):
     def test_submit_edit(self, mock_datetime):
         mock_datetime.now.return_value = datetime(2010, 12, 16, 13, 45, 21)
         self.request.form = dict(user_data_fixture)
-        agent_mock = Mock()
-        self.ui._get_ldap_agent = Mock(return_value=agent_mock)
+        self.request.form['org_literal'] = user_data_fixture['organisation'][1]
 
         self.ui.edit_account(self.request)
 
-        agent_mock.bind.assert_called_with('jsmith', 'asdf')
+        self.mock_agent.bind.assert_called_with('jsmith', 'asdf')
         self.request.RESPONSE.redirect.assert_called_with(
                 'URL/edit_account_html')
-        agent_mock.set_user_info.assert_called_with('jsmith',
-                                                    user_data_fixture)
+        self.mock_agent.set_user_info.assert_called_with('jsmith',
+                                                         user_data_fixture)
 
         page = parse_html(self.ui.edit_account_html(self.request))
         txt = lambda xp: page.xpath(xp)[0].text.strip()
@@ -112,14 +118,12 @@ class AccountUITest(unittest.TestCase):
             'new_password': "zxcv",
             'new_password_confirm': "zxcv",
         }
-        agent_mock = Mock()
-        self.ui._get_ldap_agent = Mock(return_value=agent_mock)
 
         self.ui.change_password(self.request)
 
-        agent_mock.bind.assert_called_with('jsmith', 'asdf')
-        agent_mock.set_user_password.assert_called_with('jsmith',
-                                                        "asdf", "zxcv")
+        self.mock_agent.bind.assert_called_with('jsmith', 'asdf')
+        self.mock_agent.set_user_password.assert_called_with('jsmith',
+                                                             "asdf", "zxcv")
         self.request.RESPONSE.redirect.assert_called_with(
                 'URL/password_changed_html')
 
@@ -135,14 +139,12 @@ class AccountUITest(unittest.TestCase):
             'new_password': "zxcv",
             'new_password_confirm': "zxcv",
         }
-        agent_mock = Mock()
-        agent_mock.bind.side_effect = ValueError
-        self.ui._get_ldap_agent = Mock(return_value=agent_mock)
+        self.mock_agent.bind.side_effect = ValueError
 
         self.ui.change_password(self.request)
 
-        agent_mock.bind.assert_called_with('jsmith', 'qwer')
-        assert agent_mock.set_user_password.call_count == 0
+        self.mock_agent.bind.assert_called_with('jsmith', 'qwer')
+        assert self.mock_agent.set_user_password.call_count == 0
         self.request.RESPONSE.redirect.assert_called_with(
                 'URL/change_password_html')
 
@@ -158,12 +160,10 @@ class AccountUITest(unittest.TestCase):
             'new_password': "zxcv",
             'new_password_confirm': "not quite zxcv",
         }
-        agent_mock = Mock()
-        self.ui._get_ldap_agent = Mock(return_value=agent_mock)
 
         self.ui.change_password(self.request)
 
-        assert agent_mock.set_user_password.call_count == 0
+        assert self.mock_agent.set_user_password.call_count == 0
         self.request.RESPONSE.redirect.assert_called_with(
                 'URL/change_password_html')
 
@@ -194,3 +194,72 @@ class NotLoggedInTest(unittest.TestCase):
         self.ui.change_password_html(self.request)
         self.request.RESPONSE.redirect.assert_called_with('URL/')
         self._assert_error_msg_on_index()
+
+class EditOrganisationTest(unittest.TestCase):
+    def setUp(self):
+        self.ui = StubbedUsersEditor('users')
+        self.request = mock_request()
+        self.request.AUTHENTICATED_USER = mock_user('jsmith', 'asdf')
+        self.mock_agent = MockLdapAgent()
+        self.ui._get_ldap_agent = Mock(return_value=self.mock_agent)
+        all_orgs = {'bridge_club': u"Bridge club", 'poker_club': u"Poker club"}
+        self.mock_agent.all_organisations = Mock(return_value=all_orgs)
+
+    def test_show_literal(self):
+        self.mock_agent._user_info['organisation'] = (ORG_LITERAL, u"My club")
+
+        page = parse_html(self.ui.edit_account_html(self.request))
+
+        checked_radio = page.xpath('//form//input[@name="org_type"]'
+                                                '[@checked="checked"]')
+        self.assertEqual(len(checked_radio), 1)
+        self.assertEqual(checked_radio[0].attrib['value'], ORG_LITERAL)
+
+        literal_input = page.xpath('//form'
+                                   '//input[@name="org_literal:utf8:ustring"]')
+        self.assertEqual(len(literal_input), 1)
+        self.assertEqual(literal_input[0].attrib['value'], u"My club")
+
+    def test_show_by_id(self):
+        self.mock_agent._user_info['organisation'] = (ORG_BY_ID, 'bridge_club')
+
+        page = parse_html(self.ui.edit_account_html(self.request))
+
+        checked_radio = page.xpath('//form//input[@name="org_type"]'
+                                                '[@checked="checked"]')
+        self.assertEqual(len(checked_radio), 1)
+        self.assertEqual(checked_radio[0].attrib['value'], ORG_BY_ID)
+        select_by_id = page.xpath('//form//select[@name="org_id"]')[0]
+        options = select_by_id.xpath('option')
+        self.assertEqual(len(options), 3)
+        self.assertEqual(options[0].text, u"--")
+        self.assertEqual(options[1].text, u"Bridge club")
+        self.assertEqual(options[1].attrib['value'], 'bridge_club')
+        self.assertEqual(options[1].attrib['selected'], 'selected')
+        self.assertEqual(options[2].text, u"Poker club")
+        self.assertEqual(options[2].attrib['value'], 'poker_club')
+        self.assertTrue('selected' not in options[2].attrib)
+
+    def test_submit_literal(self):
+        self.request.form = {
+            'org_type': 'literal',
+            'org_literal': u"My own little club",
+        }
+
+        self.ui.edit_account(self.request)
+
+        user_info = dict( (name, u"") for name in user_data_fixture )
+        user_info['organisation'] = (ORG_LITERAL, u"My own little club")
+        self.mock_agent.set_user_info.assert_called_with('jsmith', user_info)
+
+    def test_submit_by_id(self):
+        self.request.form = {
+            'org_type': 'by_id',
+            'org_id': 'bridge_club',
+        }
+
+        self.ui.edit_account(self.request)
+
+        user_info = dict( (name, u"") for name in user_data_fixture )
+        user_info['organisation'] = (ORG_BY_ID, 'bridge_club')
+        self.mock_agent.set_user_info.assert_called_with('jsmith', user_info)

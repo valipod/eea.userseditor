@@ -23,11 +23,6 @@
            tal:attributes="value data/email" />
     <br />
 
-    <label for="uri">Organisation:</label>
-    <input id="uri" type="text" name="organisation:utf8:ustring" size="50"
-           tal:attributes="value data/organisation" />
-    <br />
-
     <label for="uri">URL:</label>
     <input id="uri" type="text" name="uri:utf8:ustring" size="50"
            tal:attributes="value data/uri" />
@@ -42,6 +37,41 @@
     <input id="telephone_number" type="text"
            name="telephone_number:utf8:ustring" size="50"
            tal:attributes="value data/telephone_number" />
+    <br />
+
+    <label>Organisation:</label>
+    <br />
+
+    <tal:block define="org_type python:data['organisation'][0];
+                       org_value python:data['organisation'][1]">
+
+    <input type="radio" name="org_type" value="literal" id="org_type-literal"
+           tal:attributes="checked python:org_type == 'literal'" />
+    <label for="org_type-literal">Enter manually</label>
+    <label for="org_literal" style="display: none">Organisation name</label>
+    <input id="org_literal" type="text" size="50"
+           name="org_literal:utf8:ustring"
+           tal:attributes="value python:(org_type == 'literal'
+                                         and org_value
+                                         or '')" />
+    <br />
+
+    <input type="radio" name="org_type" value="by_id" id="org_type-by_id"
+           tal:attributes="checked python:org_type == 'by_id'" />
+    <label for="org_type-by_id">Pick from list</label>
+    <label for="org_id" style="display: none">Select organisation</label>
+    <select name="org_id" style="width: 30em"
+            tal:define="selected_id python:(org_type == 'by_id'
+                                            and org_value
+                                            or None)">
+        <option>--</option>
+        <option tal:repeat="org_id options/sorted_org_ids"
+                tal:attributes="value org_id;
+                                selected python:org_id == selected_id"
+                tal:content="python:options['all_organisations'][org_id]" />
+    </select>
+
+    </tal:block>
     <br />
 
     <input type="submit" value="Apply changes" />

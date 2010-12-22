@@ -9,7 +9,7 @@ from AccessControl.Permissions import view
 from persistent.list import PersistentList
 from persistent.mapping import PersistentMapping
 
-from ldap_agent import LdapAgent, editable_fields
+from ldap_agent import LdapAgent, editable_fields, ORG_LITERAL, ORG_BY_ID
 
 
 SESSION_MESSAGES = 'eea.userseditor.messages'
@@ -97,20 +97,39 @@ class UsersEditor(SimpleItem, PropertyManager):
             return REQUEST.RESPONSE.redirect(self.absolute_url() + '/')
 
         user_id = _get_user_id(REQUEST)
-        user_data = self._get_ldap_agent().user_info(user_id)
-        return self._render_template('zpt/edit_account.zpt',
-                                     form_data=user_data,
-                                     **_get_session_messages(REQUEST))
+        agent = self._get_ldap_agent()
+        all_orgs = agent.all_organisations()
+        sort_key = lambda org_id: all_orgs[org_id].strip().lower()
+        options = {
+            'form_data': agent.user_info(user_id),
+            'all_organisations': all_orgs,
+            'sorted_org_ids': sorted(all_orgs, key=sort_key),
+        }
+        options.update(_get_session_messages(REQUEST))
+        return self._render_template('zpt/edit_account.zpt', **options)
 
     security.declareProtected(view, 'edit_account')
     def edit_account(self, REQUEST):
         """ view """
         user_id = _get_user_id(REQUEST)
         form = REQUEST.form
+        def get_form_field(name, check_unicode=True):
+            value = form.get(name, u"")
+            if check_unicode:
+                assert isinstance(value, unicode), repr( (name, value) )
+            return value
         user_data = {}
         for name in editable_fields:
-            value = form.get(name, u'')
-            assert isinstance(value, unicode), repr( (name, value) )
+            if name == 'organisation':
+                org_type = form.get('org_type', ORG_LITERAL)
+                if org_type == ORG_LITERAL:
+                    value = (ORG_LITERAL, get_form_field('org_literal'))
+                elif org_type == ORG_BY_ID:
+                    value = (ORG_BY_ID, get_form_field('org_id', False))
+                else:
+                    raise ValueError("Unknown organisation type %r" % org_type)
+            else:
+                value = get_form_field(name)
             user_data[name] = value
         agent = self._get_ldap_agent()
         agent.bind(user_id, _get_user_password(REQUEST))

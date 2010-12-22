@@ -3,20 +3,7 @@ from copy import deepcopy
 import ldap
 from mock import Mock
 
-from eea.userseditor.ldap_agent import (LdapAgent, user_attr_map,
-                                        editable_field_names)
-
-user_data_fixture = {
-    'first_name': u"Joe",
-    'last_name': u"Smith",
-    'email': u"jsmith@example.com",
-    'organisation': u"Smithy Factory",
-    'uri': u"http://example.com/~jsmith",
-    'postal_address': u"13 Smithsonian Way, Copenhagen, DK",
-    'telephone_number': u"555 1234",
-}
-
-user_data_fixture_with_name = dict(user_data_fixture, full_name=u"Joe Smith")
+from eea.userseditor.ldap_agent import LdapAgent, user_attr_map
 
 
 class StubbedLdapAgent(LdapAgent):
@@ -40,18 +27,24 @@ class LdapAgentTest(unittest.TestCase):
             assert self.agent._user_dn(user_id) == user_dn
 
     def test_get_user_info(self):
-        data_dict = dict( (user_attr_map[name], [user_data_fixture[name]])
-                          for name in editable_field_names )
+        old_attrs = {
+            'givenName': ["Joe"],
+            'sn': ["Smith"],
+            'cn': ["Joe Smith"],
+            'mail': ["jsmith@example.com"],
+        }
         self.mock_conn.search_s.return_value = [
-            ('uid=jsmith,ou=Users,o=EIONET,l=Europe', data_dict)]
+            ('uid=jsmith,ou=Users,o=EIONET,l=Europe', old_attrs)]
 
-        info = self.agent.user_info('jsmith')
+        user_info = self.agent.user_info('jsmith')
 
         self.mock_conn.search_s.assert_called_once_with(
             'uid=jsmith,ou=Users,o=EIONET,l=Europe', ldap.SCOPE_BASE,
             filterstr='(objectClass=organizationalPerson)')
-        for name in editable_field_names:
-            self.assertEqual(info[name], user_data_fixture[name])
+        self.assertEqual(user_info['first_name'], u"Joe")
+        self.assertEqual(user_info['last_name'], u"Smith")
+        self.assertEqual(user_info['email'], u"jsmith@example.com")
+        self.assertEqual(user_info['full_name'], u"Joe Smith")
 
     def test_get_user_info_missing_fields(self):
         data_dict = {
@@ -112,85 +105,102 @@ class LdapAgentEditingTest(unittest.TestCase):
     def setUp(self):
         self.agent = StubbedLdapAgent('ldap.example.com')
         self.mock_conn = self.agent.conn
-        data_dict = dict( (user_attr_map[name], [value]) for name, value
-                          in user_data_fixture_with_name.iteritems() )
-        self.mock_conn.search_s.return_value = [
-            ('uid=jsmith,ou=Users,o=EIONET,l=Europe', data_dict)]
 
     def test_user_info_diff(self):
-        old_info = deepcopy(user_data_fixture_with_name)
-        old_info['email'] = ''
-        new_info = deepcopy(user_data_fixture)
-        new_info['uri'] = ''
-        new_info['postal_address'] = "Kongens Nytorv 6, Copenhagen, Denmark"
+        old_info = {
+            'uri': u"http://example.com/~jsmith",
+            'postal_address': u"old address",
+            'telephone_number': u"555 1234",
+        }
+        new_info = {
+            'email': u"jsmith@example.com",
+            'postal_address': u"Kongens Nytorv 6, Copenhagen, Denmark",
+            'telephone_number': u"555 1234",
+        }
 
-        diff = self.agent._user_info_diff(old_info, new_info)
+        diff = self.agent._user_info_diff('jsmith', old_info, new_info)
 
-        self.assertEqual(diff, [
+        self.assertEqual(diff, {'uid=jsmith,ou=Users,o=EIONET,l=Europe': [
             (ldap.MOD_ADD, 'mail', ['jsmith@example.com']),
             (ldap.MOD_DELETE, 'labeledURI', ['http://example.com/~jsmith']),
             (ldap.MOD_REPLACE, 'postalAddress', [
                                     'Kongens Nytorv 6, Copenhagen, Denmark']),
-        ])
+        ]})
 
-    def test_change_all(self):
-        new_values = dict( (name, user_data_fixture[name] + "-new")
-                           for name in editable_field_names )
-        self.mock_conn.modify_s.return_value = (ldap.RES_MODIFY, [])
+    def test_update_full_name(self):
+        old_info = {'first_name': u"Joe", 'last_name': u"Smith"}
+        self.agent._update_full_name(old_info) # that's what we expect in LDAP
+        user_info = {'first_name': u"Tester", 'last_name': u"Smith"}
 
-        self.agent.set_user_info('jsmith', new_values)
+        diff = self.agent._user_info_diff('jsmith', old_info, user_info)
 
-        modify_statements = tuple(
-            (ldap.MOD_REPLACE, user_attr_map[name], [new_values[name]])
-            for name in editable_field_names)
-        modify_statements += (
-            (ldap.MOD_REPLACE, 'cn', ["Joe-new Smith-new"]),
-        )
-        self.mock_conn.modify_s.assert_called_once_with(
-            self.agent._user_dn('jsmith'), modify_statements)
+        self.assertEqual(diff, {'uid=jsmith,ou=Users,o=EIONET,l=Europe': [
+            (ldap.MOD_REPLACE, 'givenName', ['Tester']),
+            (ldap.MOD_REPLACE, 'cn', ['Tester Smith']),
+        ]})
 
     def test_change_nothing(self):
-        new_values = dict( (name, user_data_fixture[name])
-                           for name in editable_field_names )
+        old_attrs = {'mail': ['jsmith@example.com']}
+        self.mock_conn.search_s.return_value = [
+            ('uid=jsmith,ou=Users,o=EIONET,l=Europe', old_attrs)]
+        self.mock_conn.modify_s.return_value = (ldap.RES_MODIFY, [])
 
-        self.agent.set_user_info('jsmith', new_values)
+        self.agent.set_user_info('jsmith', {'email': u'jsmith@example.com'})
 
         assert self.mock_conn.modify_s.call_count == 0
 
-    def test_change_one(self):
-        new_info = deepcopy(user_data_fixture)
-        new_info['uri'] = "http://example.com/other-url"
+    def test_add_one(self):
+        old_attrs = {}
+        self.mock_conn.search_s.return_value = [
+            ('uid=jsmith,ou=Users,o=EIONET,l=Europe', old_attrs)]
         self.mock_conn.modify_s.return_value = (ldap.RES_MODIFY, [])
 
-        self.agent.set_user_info('jsmith', new_info)
+        self.agent.set_user_info('jsmith', {'email': u'jsmith@example.com'})
 
         modify_statements = (
-            (ldap.MOD_REPLACE, 'labeledURI', ["http://example.com/other-url"]),
+            (ldap.MOD_ADD, 'mail', ["jsmith@example.com"]),
         )
         self.mock_conn.modify_s.assert_called_once_with(
             self.agent._user_dn('jsmith'), modify_statements)
 
-    def test_update_full_name(self):
-        new_info = deepcopy(user_data_fixture)
-        new_info['first_name'] = "Morpheus"
+    def test_remove_one(self):
+        old_attrs = {'mail': ['jsmith@example.com']}
+        self.mock_conn.search_s.return_value = [
+            ('uid=jsmith,ou=Users,o=EIONET,l=Europe', old_attrs)]
         self.mock_conn.modify_s.return_value = (ldap.RES_MODIFY, [])
 
-        self.agent.set_user_info('jsmith', new_info)
+        self.agent.set_user_info('jsmith', {})
 
         modify_statements = (
-            (ldap.MOD_REPLACE, 'givenName', ["Morpheus"]),
-            (ldap.MOD_REPLACE, 'cn', ["Morpheus Smith"]),
+            (ldap.MOD_DELETE, 'mail', ["jsmith@example.com"]),
+        )
+        self.mock_conn.modify_s.assert_called_once_with(
+            self.agent._user_dn('jsmith'), modify_statements)
+
+    def test_update_one(self):
+        old_attrs = {'mail': ['jsmith@example.com']}
+        self.mock_conn.search_s.return_value = [
+            ('uid=jsmith,ou=Users,o=EIONET,l=Europe', old_attrs)]
+        self.mock_conn.modify_s.return_value = (ldap.RES_MODIFY, [])
+
+        self.agent.set_user_info('jsmith', {'email': u'jsmith@x.example.com'})
+
+        modify_statements = (
+            (ldap.MOD_REPLACE, 'mail', ["jsmith@x.example.com"]),
         )
         self.mock_conn.modify_s.assert_called_once_with(
             self.agent._user_dn('jsmith'), modify_statements)
 
     def test_unicode(self):
-        china = u"\u4e2d\u56fd"
-        new_info = deepcopy(user_data_fixture)
-        new_info['postal_address'] = u"Somewhere in " + china
+        old_attrs = {'postalAddress': ['The old address']}
+        self.mock_conn.search_s.return_value = [
+            ('uid=jsmith,ou=Users,o=EIONET,l=Europe', old_attrs)]
         self.mock_conn.modify_s.return_value = (ldap.RES_MODIFY, [])
 
-        self.agent.set_user_info('jsmith', new_info)
+        china = u"\u4e2d\u56fd"
+        user_info = {'postal_address': u"Somewhere in " + china}
+
+        self.agent.set_user_info('jsmith', user_info)
 
         modify_statements = (
             (ldap.MOD_REPLACE, 'postalAddress', [

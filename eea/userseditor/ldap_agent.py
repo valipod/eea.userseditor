@@ -12,9 +12,9 @@ user_attr_map = {
     'uri': 'labeledURI',
 }
 
-editable_field_names = ['first_name', 'last_name',
-                        'email', 'organisation', 'uri',
-                        'postal_address', 'telephone_number']
+editable_fields = ['first_name', 'last_name', 'email', 'organisation', 'uri',
+                   'postal_address', 'telephone_number']
+
 
 class LdapAgent(object):
     _user_dn_suffix = 'ou=Users,o=EIONET,l=Europe'
@@ -37,7 +37,8 @@ class LdapAgent(object):
         for name, ldap_name in user_attr_map.iteritems():
             if ldap_name in attr:
                 assert len(attr[ldap_name]) == 1
-                out[name] = attr[ldap_name][0].decode(self._encoding)
+                py_value = attr[ldap_name][0].decode(self._encoding)
+                out[name] = py_value
             else:
                 out[name] = ''
         return out
@@ -52,7 +53,12 @@ class LdapAgent(object):
         assert dn == query_dn
         return self._unpack_user_info(dn, attr)
 
-    def _user_info_diff(self, old_info, new_info):
+    def _update_full_name(self, user_info):
+        full_name = '%s %s' % (user_info.get('first_name', u""),
+                               user_info.get('last_name', u""))
+        user_info['full_name'] = full_name.strip()
+
+    def _user_info_diff(self, user_id, old_info, new_info):
         modify_statements = []
         def do(*args):
             modify_statements.append(args)
@@ -61,11 +67,10 @@ class LdapAgent(object):
             return [value.encode(self._encoding)]
 
         new_info = dict(new_info)
-        new_info['full_name'] = '%s %s' % (new_info['first_name'],
-                                           new_info['last_name'])
-        for name in editable_field_names + ['full_name']:
-            old_value = old_info[name]
-            new_value = new_info[name]
+        self._update_full_name(new_info)
+        for name in editable_fields + ['full_name']:
+            old_value = old_info.get(name, u"")
+            new_value = new_info.get(name, u"")
             ldap_name = user_attr_map[name]
 
             if old_value == new_value == '':
@@ -80,17 +85,21 @@ class LdapAgent(object):
             elif old_value != new_value:
                 do(ldap.MOD_REPLACE, ldap_name, pack(new_value))
 
-        return modify_statements
+        out = {}
+        if modify_statements:
+            out[self._user_dn(user_id)] = modify_statements
+
+        return out
 
     def set_user_info(self, user_id, new_info):
         old_info = self.user_info(user_id)
-        modify_statements = self._user_info_diff(old_info, new_info)
-        if not modify_statements:
+        diff = self._user_info_diff(user_id, old_info, new_info)
+        if not diff:
             return
 
-        result = self.conn.modify_s(self._user_dn(user_id),
-                                    tuple(modify_statements))
-        assert result == (ldap.RES_MODIFY, [])
+        for dn, modify_statements in diff.iteritems():
+            result = self.conn.modify_s(dn, tuple(modify_statements))
+            assert result == (ldap.RES_MODIFY, [])
 
     def bind(self, user_id, user_pw):
         try:

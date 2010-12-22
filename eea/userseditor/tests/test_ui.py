@@ -8,7 +8,16 @@ from eea.userseditor.users_editor import UsersEditor
 def parse_html(html):
     return fromstring(re.sub(r'\s+', ' ', html))
 
-from test_ldap_agent import user_data_fixture
+user_data_fixture = {
+    'first_name': u"Joe",
+    'last_name': u"Smith",
+    'email': u"jsmith@example.com",
+    'organisation': u"Smithy Factory",
+    'uri': u"http://example.com/~jsmith",
+    'postal_address': u"13 Smithsonian Way, Copenhagen, DK",
+    'telephone_number': u"555 1234",
+}
+
 
 class StubbedUsersEditor(UsersEditor):
     def _render_template(self, name, **options):

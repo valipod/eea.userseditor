@@ -9,7 +9,7 @@ from AccessControl.Permissions import view
 from persistent.list import PersistentList
 from persistent.mapping import PersistentMapping
 
-from ldap_agent import LdapAgent, editable_field_names
+from ldap_agent import LdapAgent, editable_fields
 
 
 SESSION_MESSAGES = 'eea.userseditor.messages'
@@ -108,7 +108,7 @@ class UsersEditor(SimpleItem, PropertyManager):
         user_id = _get_user_id(REQUEST)
         form = REQUEST.form
         user_data = {}
-        for name in editable_field_names:
+        for name in editable_fields:
             value = form.get(name, u'')
             assert isinstance(value, unicode), repr( (name, value) )
             user_data[name] = value

@@ -1,6 +1,6 @@
 from datetime import datetime
 from AccessControl import ClassSecurityInfo
-from Globals import InitializeClass
+from App.class_init import InitializeClass
 from Products.PageTemplates.PageTemplateFile import PageTemplateFile
 from OFS.SimpleItem import SimpleItem
 from OFS.PropertyManager import PropertyManager

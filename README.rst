@@ -28,6 +28,10 @@ and load the product at startup.
 
 From ZMI you can now add an `Eionet Users Editor` object.
 
+Page templates in this package expect the Eionet default layout at ``/styles``
+and jQuery at ``/styles/jquery-1.4.4.min.js``; it also uses the macro at
+``/standard_template.pt``.
+
 
 Development
 -----------

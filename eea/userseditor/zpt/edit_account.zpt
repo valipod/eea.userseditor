@@ -1,3 +1,5 @@
+<script src="/styles/jquery-1.4.4.min.js"></script>
+
 <div class="error-msg"
      tal:condition="python:options.get('error', False)"
      tal:content="options/error" />
@@ -13,7 +15,8 @@
         >change password</a>]
 </p>
 
-<form action="edit_account" method="post" tal:define="data options/form_data">
+<form action="edit_account" method="post" name="edit-account"
+      tal:define="data options/form_data">
 <table>
   <tr>
     <td><label for="edit-first_name">First name:</label></td>
@@ -109,3 +112,23 @@
   </tr>
 </table>
 </form>
+
+<script>$(function() {
+    var frm = $('form[name="edit-account"]');
+
+    var literal_input = $('input[name="org_literal:utf8:ustring"]', frm);
+    var choose_literal = function() {
+        $('input[name="org_type"][value="literal"]').attr('checked', true);
+    };
+    literal_input.click(choose_literal);
+    literal_input.keypress(choose_literal);
+    literal_input.change(choose_literal);
+
+    var by_id_select = $('select[name="org_id"]', frm);
+    var choose_by_id = function() {
+        $('input[name="org_type"][value="by_id"]').attr('checked', true);
+    };
+    by_id_select.click(choose_by_id);
+    by_id_select.keypress(choose_by_id);
+    by_id_select.change(choose_by_id);
+});</script>

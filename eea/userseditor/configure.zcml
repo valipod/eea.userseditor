@@ -1,0 +1,15 @@
+<configure xmlns="http://namespaces.zope.org/zope"
+           xmlns:browser="http://namespaces.zope.org/browser"
+           xmlns:five="http://namespaces.zope.org/five">
+
+  <five:registerPackage
+      package="eea.userseditor"
+      initialize="eea.userseditor.initialize"
+      />
+
+  <browser:resourceDirectory
+      name="eea.userseditor-www"
+      directory="www"
+      />
+
+</configure>

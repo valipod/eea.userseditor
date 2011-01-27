@@ -58,7 +58,7 @@ def load_template(name, _memo={}):
 
 class UsersEditor(SimpleItem, PropertyManager):
     meta_type = 'Eionet Users Editor'
-    icon = 'misc_/EionetUsersEditor/users_editor.gif'
+    icon = '++resource++eea.userseditor-www/users_editor.gif'
     manage_options = PropertyManager.manage_options + (
         {'label':'View', 'action':''},
     ) + SimpleItem.manage_options

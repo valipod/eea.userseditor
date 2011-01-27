@@ -7,14 +7,19 @@
      tal:condition="python:options.get('message', False)"
      tal:content="options/message" />
 
+<p class="not-logged-in" tal:condition="not: options/user_info">
+    You must be authenticated to edit your profile.
+    Please <a href="/loggedin">log in</a>.
+</p>
+
+<tal:block define="data options/user_info" condition="data">
+
 <p>
     [<a tal:attributes="href string:${options/base_url}/edit_account_html"
        >edit account</a>]
     [<a tal:attributes="href string:${options/base_url}/change_password_html"
        >change password</a>]
 </p>
-
-<tal:block define="data options/user_info|nothing" condition="data">
 
 <p>Your account information:</p>
 

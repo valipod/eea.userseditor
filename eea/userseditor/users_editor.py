@@ -93,6 +93,8 @@ class UsersEditor(SimpleItem, PropertyManager):
             options['user_info'] = agent.user_info(user_id)
             if options['user_info']['organisation'][0] == ORG_BY_ID:
                 options['all_organisations'] = agent.all_organisations()
+        else:
+            options['user_info'] = None
         options.update(_get_session_messages(REQUEST))
         return self._render_template('zpt/index.zpt', **options)
 
@@ -100,8 +102,6 @@ class UsersEditor(SimpleItem, PropertyManager):
     def edit_account_html(self, REQUEST):
         """ view """
         if not _is_logged_in(REQUEST):
-            _set_session_message(REQUEST, 'error',
-                                 "You must be logged in to edit your profile.")
             return REQUEST.RESPONSE.redirect(self.absolute_url() + '/')
 
         user_id = _get_user_id(REQUEST)
@@ -151,8 +151,6 @@ class UsersEditor(SimpleItem, PropertyManager):
     def change_password_html(self, REQUEST):
         """ view """
         if not _is_logged_in(REQUEST):
-            _set_session_message(REQUEST, 'error',
-                                 "You must be logged in to edit your profile.")
             return REQUEST.RESPONSE.redirect(self.absolute_url() + '/')
 
         return self._render_template('zpt/change_password.zpt',

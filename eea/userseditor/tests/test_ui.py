@@ -181,9 +181,18 @@ class NotLoggedInTest(unittest.TestCase):
 
     def _assert_error_msg_on_index(self):
         page = parse_html(self.ui.index_html(self.request))
-        txt = lambda xp: page.xpath(xp)[0].text.strip()
-        self.assertEqual(txt('//div[@class="error-msg"]'),
-                         "You must be logged in to edit your profile.")
+        txt = lambda xp: page.xpath(xp)[0].text_content().strip()
+        self.assertEqual(txt('//p[@class="not-logged-in"]'),
+                         "You must be authenticated to edit your profile. "
+                         "Please log in.")
+
+    def test_main_page(self):
+        page = parse_html(self.ui.index_html(self.request))
+
+        txt = lambda xp: page.xpath(xp)[0].text_content().strip()
+        self.assertEqual(txt('//p[@class="not-logged-in"]'),
+                         "You must be authenticated to edit your profile. "
+                         "Please log in.")
 
     def test_edit_form(self):
         self.ui.edit_account_html(self.request)

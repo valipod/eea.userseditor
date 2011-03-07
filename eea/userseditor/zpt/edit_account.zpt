@@ -133,11 +133,14 @@
       <table>
         <tr>
           <td>
+            <tal:block condition="nothing">
             <input type="radio" name="org_type" value="literal"
                    id="edit-org_type-literal"
                    tal:attributes="checked python:org_type == 'literal'" />
 
             <label for="edit-org_type-literal">Enter manually</label>
+            </tal:block><input type="hidden" name="org_type" value="literal" />
+
             <input id="edit-org_literal" type="text" size="50"
                    class="text-input medium"
                    name="org_literal:utf8:ustring"
@@ -146,6 +149,7 @@
                                                  or '')" />
           </td>
 
+          <tal:block condition="nothing">
           <td align="center"><strong>OR</strong></td>
 
           <td>
@@ -166,6 +170,7 @@
                                      selected python:org_id == selected_id" />
             </select>
           </td>
+          </tal:block>
         </tr>
       </table>
     </td>

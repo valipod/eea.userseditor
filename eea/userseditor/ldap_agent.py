@@ -1,4 +1,8 @@
+import logging
+from functools import wraps
 import ldap, ldap.filter
+
+log = logging.getLogger(__name__)
 
 user_attr_map = {
     'first_name': 'givenName',
@@ -19,6 +23,16 @@ ORG_LITERAL = 'literal'
 ORG_BY_ID = 'by_id'
 BLANK_ORG = (ORG_LITERAL, u"")
 
+def log_ldap_exceptions(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except ldap.LDAPError:
+            log.exception("Uncaught exception from LDAP")
+            raise
+    return wrapper
+
 class LdapAgent(object):
     _user_dn_suffix = 'ou=Users,o=EIONET,l=Europe'
     _org_dn_suffix = 'ou=Organisations,o=EIONET,l=Europe'
@@ -27,6 +41,7 @@ class LdapAgent(object):
     def __init__(self, server):
         self.conn = self.connect(server)
 
+    @log_ldap_exceptions
     def connect(self, server):
         conn = ldap.initialize('ldap://' + server)
         conn.protocol_version = ldap.VERSION3
@@ -63,6 +78,7 @@ class LdapAgent(object):
 
         return out
 
+    @log_ldap_exceptions
     def user_info(self, user_id):
         query_dn = self._user_dn(user_id)
         result = self.conn.search_s(query_dn, ldap.SCOPE_BASE,
@@ -154,6 +170,7 @@ class LdapAgent(object):
 
         return out
 
+    @log_ldap_exceptions
     def set_user_info(self, user_id, new_info):
         old_info = self.user_info(user_id)
         existing_orgs = self._search_user_in_orgs(user_id)
@@ -161,10 +178,12 @@ class LdapAgent(object):
         if not diff:
             return
 
+        log.info("Modifying info for user %r", user_id)
         for dn, modify_statements in diff.iteritems():
             result = self.conn.modify_s(dn, tuple(modify_statements))
             assert result == (ldap.RES_MODIFY, [])
 
+    @log_ldap_exceptions
     def bind(self, user_id, user_pw):
         try:
             result = self.conn.simple_bind_s(self._user_dn(user_id), user_pw)
@@ -173,7 +192,9 @@ class LdapAgent(object):
             raise ValueError("Authentication failure")
         assert result == (ldap.RES_BIND, [])
 
+    @log_ldap_exceptions
     def set_user_password(self, user_id, old_pw, new_pw):
+        log.info("Changing password for user %r", user_id)
         try:
             result = self.conn.passwd_s(self._user_dn(user_id), old_pw, new_pw)
         except ldap.UNWILLING_TO_PERFORM:
@@ -189,6 +210,7 @@ class LdapAgent(object):
                                     filterstr=query_filter, attrlist=())
         return [self._org_id(dn) for dn, attr in result]
 
+    @log_ldap_exceptions
     def all_organisations(self):
         result = self.conn.search_s(self._org_dn_suffix, ldap.SCOPE_ONELEVEL,
                     filterstr='(objectClass=organizationGroup)',

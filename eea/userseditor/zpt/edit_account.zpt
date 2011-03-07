@@ -57,6 +57,17 @@
 
   <tr>
     <td class="right-td">
+      <label for="edit-job_title">Job title:</label>
+    </td>
+    <td>
+      <input id="edit-job_title" type="text"
+             name="job_title:utf8:ustring"
+             class="text-input large"
+             size="50" tal:attributes="value data/job_title" /></td>
+  </tr>
+
+  <tr>
+    <td class="right-td">
       <label for="edit-email">E-mail:</label>
     </td>
     <td>
@@ -98,6 +109,18 @@
              name="phone:utf8:ustring" size="50"
              class="text-input large"
              tal:attributes="value data/phone" />
+    </td>
+  </tr>
+
+  <tr>
+    <td class="right-td">
+      <label for="edit-fax">Fax number:</label>
+    </td>
+    <td>
+      <input id="edit-fax" type="text"
+             name="fax:utf8:ustring" size="50"
+             class="text-input large"
+             tal:attributes="value data/fax" />
     </td>
   </tr>
 

@@ -16,10 +16,12 @@ def parse_html(html):
 user_data_fixture = {
     'first_name': u"Joe",
     'last_name': u"Smith",
+    'job_title': u"Lab rat",
     'email': u"jsmith@example.com",
     'url': u"http://example.com/~jsmith",
     'postal_address': u"13 Smithsonian Way, Copenhagen, DK",
     'phone': u"555 1234",
+    'fax': u"555 6789",
     'organisation': (ORG_LITERAL, u"My company"),
 }
 
@@ -75,6 +77,8 @@ class AccountUITest(unittest.TestCase):
                          user_data_fixture['first_name'])
         self.assertEqual(val('//form//input[@name="last_name:utf8:ustring"]'),
                          user_data_fixture['last_name'])
+        self.assertEqual(val('//form//input[@name="job_title:utf8:ustring"]'),
+                         user_data_fixture['job_title'])
         self.assertEqual(val('//form//input[@name="email:utf8:ustring"]'),
                          user_data_fixture['email'])
         self.assertEqual(val('//form//input[@name="url:utf8:ustring"]'),
@@ -84,6 +88,8 @@ class AccountUITest(unittest.TestCase):
                          "13 Smithsonian Way, Copenhagen, DK")
         self.assertEqual(val('//form//input[@name="phone:utf8:ustring"]'),
                          user_data_fixture['phone'])
+        self.assertEqual(val('//form//input[@name="fax:utf8:ustring"]'),
+                         user_data_fixture['fax'])
 
     @patch('eea.userseditor.users_editor.datetime')
     def test_submit_edit(self, mock_datetime):

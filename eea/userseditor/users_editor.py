@@ -57,6 +57,32 @@ def load_template(name, _memo={}):
         _memo[name] = PageTemplateFile(name, globals())
     return _memo[name]
 
+class DualLDAPProxy(object):
+    """
+    while CIRCA is still online, we need to write stuff to both LDAP
+    servers. CIRCA first.
+    """
+
+    def __init__(self, current_ldap, legacy_ldap):
+        self._current_ldap = current_ldap
+        self._legacy_ldap = legacy_ldap
+
+    def bind_user(self, user_id, user_pw):
+        self._legacy_ldap.bind_user(user_id, user_pw)
+        self._current_ldap.bind_user(user_id, user_pw)
+
+    def set_user_info(self, user_id, new_info):
+        self._legacy_ldap.set_user_info(user_id, new_info)
+        self._current_ldap.set_user_info(user_id, new_info)
+
+    def set_user_password(self, user_id, old_pw, new_pw):
+        self._legacy_ldap.set_user_password(user_id, old_pw, new_pw)
+        self._current_ldap.set_user_password(user_id, old_pw, new_pw)
+
+    def __getattr__(self, name):
+        # patch all other methods straight to front-end ldap
+        return getattr(self._current_ldap, name)
+
 
 class UsersEditor(SimpleItem, PropertyManager):
     meta_type = 'Eionet Users Editor'
@@ -71,12 +97,27 @@ class UsersEditor(SimpleItem, PropertyManager):
     )
     security = ClassSecurityInfo()
 
+    legacy_ldap_server = ""
+    _properties += (
+        {'id':'legacy_ldap_server', 'type': 'string', 'mode':'w',
+         'label': 'Legacy LDAP Server (CIRCA)'},
+    )
+
     def __init__(self, title, ldap_server):
         self.title = title
         self.ldap_server = ldap_server
 
-    def _get_ldap_agent(self):
-        return usersdb.UsersDB(ldap_server=self.ldap_server)
+    def _get_ldap_agent(self, write=False):
+        #return usersdb.UsersDB(ldap_server=self.ldap_server)
+
+        # temporary fix while CIRCA is still online
+        current_agent = usersdb.UsersDB(ldap_server=self.ldap_server)
+        if write and self.legacy_ldap_server != "":
+            legacy_agent = usersdb.UsersDB(ldap_server=self.legacy_ldap_server,
+                                         encoding="ISO-8859-1")
+            return DualLDAPProxy(current_agent, legacy_agent)
+        else:
+            return current_agent
 
     _zope2_wrapper = PageTemplateFile('zpt/zope2_wrapper.zpt', globals())
 
@@ -145,7 +186,7 @@ class UsersEditor(SimpleItem, PropertyManager):
             else:
                 value = get_form_field(name)
             user_data[name] = value
-        agent = self._get_ldap_agent()
+        agent = self._get_ldap_agent(write=True)
         agent.bind_user(user_id, _get_user_password(REQUEST))
         agent.set_user_info(user_id, user_data)
         when = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -168,7 +209,7 @@ class UsersEditor(SimpleItem, PropertyManager):
         """ view """
         form = REQUEST.form
         user_id = _get_user_id(REQUEST)
-        agent = self._get_ldap_agent()
+        agent = self._get_ldap_agent(write=True)
 
         if form['new_password'] != form['new_password_confirm']:
             _set_session_message(REQUEST, 'error',

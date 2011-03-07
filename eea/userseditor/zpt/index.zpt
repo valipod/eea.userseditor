@@ -42,6 +42,11 @@
   </tr>
 
   <tr>
+    <th>Job title:</th>
+    <td tal:content="data/job_title" />
+  </tr>
+
+  <tr>
     <th>E-mail:</th>
     <td tal:content="data/email" />
   </tr>
@@ -59,6 +64,11 @@
   <tr>
     <th>Telephone number:</th>
     <td tal:content="data/phone" />
+  </tr>
+
+  <tr>
+    <th>Fax number:</th>
+    <td tal:content="data/fax" />
   </tr>
 
   <tr>

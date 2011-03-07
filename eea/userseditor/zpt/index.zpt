@@ -1,4 +1,4 @@
-<h1>Eionet account pages</h1>
+<h1 class="account-h1">EIONET account</h1>
 
 <div class="error-msg"
      tal:condition="python:options.get('error', False)"
@@ -15,47 +15,54 @@
 <tal:block define="data options/user_info" condition="data">
 
 <p>
-    [<a tal:attributes="href string:${options/base_url}/edit_account_html"
-       >edit account</a>]
-    [<a tal:attributes="href string:${options/base_url}/change_password_html"
-       >change password</a>]
-</p>
+
+<div class="account-links">
+    <a class="button" tal:attributes="href string:${options/base_url}/edit_account_html" title="Edit account settigns">
+        <img src="/++resource++eea.userseditor-www/settings.png" class="middle-image image12" alt="" title="Edit account settings" />
+        Account settings
+    </a>
+    &nbsp;
+    <a tal:attributes="href string:${options/base_url}/change_password_html" class="button" title="Change your account password">
+        <img src="/++resource++eea.userseditor-www/lock.png" class="middle-image image12" alt="" title="Edit account settings" />
+        Change password
+    </a>
+</div>
 
 <p>Your account information:</p>
 
-<table>
+<table class="account-table">
   <tr>
-    <td>First name:</td>
+    <th>First name:</th>
     <td tal:content="data/first_name" />
   </tr>
 
   <tr>
-    <td>Last name:</td>
+    <th>Last name:</th>
     <td tal:content="data/last_name" />
   </tr>
 
   <tr>
-    <td>E-mail:</td>
+    <th>E-mail:</th>
     <td tal:content="data/email" />
   </tr>
 
   <tr>
-    <td>URL:</td>
+    <th>URL:</th>
     <td tal:content="data/uri" />
   </tr>
 
   <tr>
-    <td>Postal address:</td>
+    <th>Postal address:</th>
     <td tal:content="data/postal_address" />
   </tr>
 
   <tr>
-    <td>Telephone number:</td>
+    <th>Telephone number:</th>
     <td tal:content="data/telephone_number" />
   </tr>
 
   <tr>
-    <td>Organisation:</td>
+    <th>Organisation:</th>
     <tal:block define="org_type python:data['organisation'][0];
                        org_value python:data['organisation'][1]">
       <td tal:condition="python:org_type == 'literal'"

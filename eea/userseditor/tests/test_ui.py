@@ -6,6 +6,10 @@ from mock import Mock, patch
 from eea.userseditor.users_editor import UsersEditor
 from eea.userseditor.ldap_agent import ORG_LITERAL, ORG_BY_ID
 
+def plaintext(element):
+    import re
+    return re.sub(r'\s\s+', ' ', element.text_content()).strip()
+
 def parse_html(html):
     return fromstring(re.sub(r'\s+', ' ', html))
 
@@ -64,9 +68,9 @@ class AccountUITest(unittest.TestCase):
     def test_edit_form(self):
         page = parse_html(self.ui.edit_account_html(self.request))
 
-        txt = lambda xp: page.xpath(xp)[0].text.strip()
+        txt = lambda xp: plaintext(page.xpath(xp)[0])
         val = lambda xp: page.xpath(xp)[0].attrib['value']
-        self.assertEqual(txt('//h1'), "Modify Eionet account")
+        self.assertEqual(txt('//h1'), "EIONET account Edit information")
         self.assertEqual(val('//form//input[@name="first_name:utf8:ustring"]'),
                          user_data_fixture['first_name'])
         self.assertEqual(val('//form//input[@name="last_name:utf8:ustring"]'),
@@ -104,9 +108,9 @@ class AccountUITest(unittest.TestCase):
     def test_password_form(self):
         page = parse_html(self.ui.change_password_html(self.request))
 
-        txt = lambda xp: page.xpath(xp)[0].text.strip()
+        txt = lambda xp: plaintext(page.xpath(xp)[0])
         exists = lambda xp: len(page.xpath(xp)) > 0
-        self.assertEqual(txt('//h1'), "Change Eionet account password")
+        self.assertEqual(txt('//h1'), "EIONET account Change password")
         self.assertEqual(txt('//p/tt'), "jsmith")
         self.assertTrue(exists('//form//input[@type="password"]'
                                             '[@name="old_password"]'))

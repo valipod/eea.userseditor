@@ -1,4 +1,25 @@
-<script src="/styles/jquery-1.4.4.min.js"></script>
+<h1 class="account-h1">
+    EIONET account
+    <img src="/++resource++eea.userseditor-www/next.png" class="image12" alt=""
+         title="Subsection" />
+    Edit information
+</h1>
+
+<div class="account-links">
+    <a tal:attributes="href string:${options/base_url}/" class="button"
+       title="Back to account information">
+        <img src="/++resource++eea.userseditor-www/back.png" class="middle-image image12"
+             alt="" title="Back to account information" />
+        Back to account information
+    </a>
+    &nbsp;
+    <a tal:attributes="href string:${options/base_url}/change_password_html"
+       class="button" title="Change your account password">
+        <img src="/++resource++eea.userseditor-www/lock.png" class="middle-image image12"
+             alt="" title="Edit account settings" />
+        Change password
+    </a>
+</div>
 
 <div class="error-msg"
      tal:condition="python:options.get('error', False)"
@@ -7,110 +28,134 @@
      tal:condition="python:options.get('message', False)"
      tal:content="options/message" />
 
-<h1>Modify Eionet account</h1>
-
-<p>
-    [<a tal:attributes="href string:${options/base_url}/">back</a>]
-    [<a tal:attributes="href string:${options/base_url}/change_password_html"
-        >change password</a>]
-</p>
-
 <form action="edit_account" method="post" name="edit-account"
       tal:define="data options/form_data">
-<table>
+
+<table class="account-table">
   <tr>
-    <td><label for="edit-first_name">First name:</label></td>
-    <td><input id="edit-first_name" type="text" name="first_name:utf8:ustring"
-               size="50" tal:attributes="value data/first_name" /></td>
-  </tr>
-
-  <tr>
-    <td><label for="edit-last_name">Last name:</label></td>
-    <td><input id="edit-last_name" type="text" name="last_name:utf8:ustring"
-               size="50" tal:attributes="value data/last_name" /></td>
-  </tr>
-
-  <tr>
-    <td><label for="edit-email">E-mail:</label></td>
-    <td><input id="edit-email" type="text" name="email:utf8:ustring"
-               size="50" tal:attributes="value data/email" /></td>
-  </tr>
-
-  <tr>
-    <td><label for="edit-uri">URL:</label></td>
-    <td><input id="edit-uri" type="text" name="uri:utf8:ustring"
-               size="50" tal:attributes="value data/uri" /></td>
-  </tr>
-
-  <tr>
-    <td><label for="edit-postal_address">Postal address:</label></td>
-    <td><textarea id="edit-postal_address" name="postal_address:utf8:ustring"
-                  cols="80" rows="4" tal:content="data/postal_address" /></td>
-  </tr>
-
-  <tr>
-    <td><label for="edit-telephone_number">Telephone number:</label></td>
-    <td><input id="edit-telephone_number" type="text"
-           name="telephone_number:utf8:ustring" size="50"
-           tal:attributes="value data/telephone_number" /></td>
-  </tr>
-
-  <tr>
-    <td><label>Organisation:</label></td>
-
-    <td tal:define="org_type python:data['organisation'][0];
-                    org_value python:data['organisation'][1]">
-
-    <table>
-      <tr>
-        <td>
-          <input type="radio" name="org_type" value="literal"
-                 id="edit-org_type-literal"
-                 tal:attributes="checked python:org_type == 'literal'" />
-          <label for="edit-org_type-literal">Enter manually</label>
-        </td>
-        <td>
-          <label for="edit-org_literal" style="display: none"
-                 >Organisation name</label>
-          <input id="edit-org_literal" type="text" size="50"
-                 name="org_literal:utf8:ustring"
-                 tal:attributes="value python:(org_type == 'literal'
-                                               and org_value
-                                               or '')" />
-        </td>
-      </tr>
-
-      <tr>
-        <td>
-          <input type="radio" name="org_type" value="by_id"
-                 id="edit-org_type-by_id"
-                 tal:attributes="checked python:org_type == 'by_id'" />
-          <label for="edit-org_type-by_id">Pick from list</label>
-        </td>
-        <td>
-          <label for="edit-org_id" style="display: none"
-                 >Select organisation</label>
-          <select id="edit-org_id" name="org_id" style="width: 30em"
-                  tal:define="selected_id python:(org_type == 'by_id'
-                                                  and org_value
-                                                  or None)">
-            <option>--</option>
-            <option tal:repeat="org_id options/sorted_org_ids"
-                    tal:content="python:options['all_organisations'][org_id]"
-                    tal:attributes="value org_id;
-                                    selected python:org_id == selected_id" />
-          </select>
-        </td>
-      </tr>
-    </table>
-
+    <td class="right-td">
+      <label for="edit-first_name">First name:</label>
+    </td>
+    <td>
+      <input id="edit-first_name" type="text"
+             name="first_name:utf8:ustring"
+             class="text-input large"
+             size="50" tal:attributes="value data/first_name" />
     </td>
   </tr>
 
   <tr>
-    <td colspan="2"><input type="submit" value="Apply changes" /></td>
+    <td class="right-td">
+      <label for="edit-last_name">Last name:</label>
+    </td>
+    <td>
+      <input id="edit-last_name" type="text"
+             name="last_name:utf8:ustring"
+             class="text-input large"
+             size="50" tal:attributes="value data/last_name" /></td>
+  </tr>
+
+  <tr>
+    <td class="right-td">
+      <label for="edit-email">E-mail:</label>
+    </td>
+    <td>
+      <input id="edit-email" type="text" name="email:utf8:ustring"
+             class="text-input large"
+             size="50" tal:attributes="value data/email" />
+    </td>
+  </tr>
+
+  <tr>
+    <td class="right-td">
+      <label for="edit-uri">URL:</label>
+    </td>
+    <td>
+      <input id="edit-uri" type="text" name="uri:utf8:ustring"
+             class="text-input large"
+             size="50" tal:attributes="value data/uri" />
+    </td>
+  </tr>
+
+  <tr>
+    <td class="right-td top">
+      <label for="edit-postal_address">Postal address:</label>
+    </td>
+    <td>
+      <textarea id="edit-postal_address"
+                name="postal_address:utf8:ustring"
+                class="account-textarea large"
+                tal:content="data/postal_address" />
+    </td>
+  </tr>
+
+  <tr>
+    <td class="right-td">
+      <label for="edit-telephone_number">Telephone number:</label>
+    </td>
+    <td>
+      <input id="edit-telephone_number" type="text"
+             name="telephone_number:utf8:ustring" size="50"
+             class="text-input large"
+             tal:attributes="value data/telephone_number" />
+    </td>
+  </tr>
+
+  <tr>
+    <td class="right-td">
+      <label>Organisation:</label>
+    </td>
+    <td tal:define="org_type python:data['organisation'][0];
+             org_value python:data['organisation'][1]">
+      <table>
+        <tr>
+          <td>
+            <input type="radio" name="org_type" value="literal"
+                   id="edit-org_type-literal"
+                   tal:attributes="checked python:org_type == 'literal'" />
+
+            <label for="edit-org_type-literal">Enter manually</label>
+            <input id="edit-org_literal" type="text" size="50"
+                   class="text-input medium"
+                   name="org_literal:utf8:ustring"
+                   tal:attributes="value python:(org_type == 'literal'
+                                                 and org_value
+                                                 or '')" />
+          </td>
+
+          <td align="center"><strong>OR</strong></td>
+
+          <td>
+            <input type="radio" name="org_type" value="by_id"
+                  id="edit-org_type-by_id"
+                  tal:attributes="checked python:org_type == 'by_id'" />
+            <label for="edit-org_type-by_id">Pick from list</label>
+
+            <select id="edit-org_id" name="org_id"
+                    class="account-select medium"
+                   tal:define="selected_id python:(org_type == 'by_id'
+                                                   and org_value
+                                                   or None)">
+             <option>--</option>
+             <option tal:repeat="org_id options/sorted_org_ids"
+                     tal:content="python:options['all_organisations'][org_id]"
+                     tal:attributes="value org_id;
+                                     selected python:org_id == selected_id" />
+            </select>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <tr>
+    <td colspan="2" align="center">
+      <input type="submit" value="Apply changes" name="submit"
+             class="primary-button" />
+    </td>
   </tr>
 </table>
+
 </form>
 
 <script>$(function() {

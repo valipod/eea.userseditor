@@ -32,6 +32,9 @@ class MockLdapAgent(Mock):
 
 
 class StubbedUsersEditor(UsersEditor):
+    def __init__(self):
+        pass
+
     def _render_template(self, name, **options):
         from eea.userseditor.users_editor import load_template
         return "<html>%s</html>" % load_template(name)(**options)
@@ -52,7 +55,7 @@ def mock_request():
 
 class AccountUITest(unittest.TestCase):
     def setUp(self):
-        self.ui = StubbedUsersEditor('users')
+        self.ui = StubbedUsersEditor()
         self.request = mock_request()
         self.request.AUTHENTICATED_USER = mock_user('jsmith', 'asdf')
         self.mock_agent = MockLdapAgent()
@@ -175,7 +178,7 @@ class AccountUITest(unittest.TestCase):
 
 class NotLoggedInTest(unittest.TestCase):
     def setUp(self):
-        self.ui = StubbedUsersEditor('users')
+        self.ui = StubbedUsersEditor()
         self.request = mock_request()
         self.request.AUTHENTICATED_USER = mock_user(None, '')
 
@@ -206,7 +209,7 @@ class NotLoggedInTest(unittest.TestCase):
 
 class EditOrganisationTest(unittest.TestCase):
     def setUp(self):
-        self.ui = StubbedUsersEditor('users')
+        self.ui = StubbedUsersEditor()
         self.request = mock_request()
         self.request.AUTHENTICATED_USER = mock_user('jsmith', 'asdf')
         self.mock_agent = MockLdapAgent()

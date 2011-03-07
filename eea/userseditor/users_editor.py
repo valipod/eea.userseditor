@@ -15,9 +15,11 @@ from ldap_agent import LdapAgent, editable_fields, ORG_LITERAL, ORG_BY_ID
 SESSION_MESSAGES = 'eea.userseditor.messages'
 
 manage_addUsersEditor_html = PageTemplateFile('zpt/add', globals())
-def manage_addUsersEditor(parent, id, REQUEST=None):
+def manage_addUsersEditor(parent, id, title="", ldap_server="", REQUEST=None):
     """ Adds a new Eionet Users Editor object """
-    parent._setObject(id, UsersEditor(id))
+    ob = UsersEditor(title, ldap_server)
+    ob._setId(id)
+    parent._setObject(id, ob)
     if REQUEST is not None:
         REQUEST.RESPONSE.redirect(parent.absolute_url() + '/manage_workspace')
 
@@ -63,14 +65,15 @@ class UsersEditor(SimpleItem, PropertyManager):
         {'label':'View', 'action':''},
     ) + SimpleItem.manage_options
     _properties = (
+        {'id':'title', 'type': 'string', 'mode':'w', 'label': 'Title'},
         {'id':'ldap_server', 'type': 'string', 'mode':'w',
          'label': 'LDAP Server'},
     )
     security = ClassSecurityInfo()
 
-    def __init__(self, id):
-        self.id = id
-        self.ldap_server = ""
+    def __init__(self, title, ldap_server):
+        self.title = title
+        self.ldap_server = ldap_server
 
     def _get_ldap_agent(self):
         return LdapAgent(self.ldap_server)

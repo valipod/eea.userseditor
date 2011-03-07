@@ -9,7 +9,7 @@ from AccessControl.Permissions import view
 from persistent.list import PersistentList
 from persistent.mapping import PersistentMapping
 
-from ldap_agent import LdapAgent, editable_fields, ORG_LITERAL, ORG_BY_ID
+from eea import usersdb
 
 
 SESSION_MESSAGES = 'eea.userseditor.messages'
@@ -76,7 +76,7 @@ class UsersEditor(SimpleItem, PropertyManager):
         self.ldap_server = ldap_server
 
     def _get_ldap_agent(self):
-        return LdapAgent(self.ldap_server)
+        return usersdb.UsersDB(ldap_server=self.ldap_server)
 
     _zope2_wrapper = PageTemplateFile('zpt/zope2_wrapper.zpt', globals())
 
@@ -94,7 +94,7 @@ class UsersEditor(SimpleItem, PropertyManager):
             agent = self._get_ldap_agent()
             user_id = _get_user_id(REQUEST)
             options['user_info'] = agent.user_info(user_id)
-            if options['user_info']['organisation'][0] == ORG_BY_ID:
+            if options['user_info']['organisation'][0] == usersdb.ORG_BY_ID:
                 options['all_organisations'] = agent.all_organisations()
         else:
             options['user_info'] = None
@@ -131,13 +131,15 @@ class UsersEditor(SimpleItem, PropertyManager):
                 assert isinstance(value, unicode), repr( (name, value) )
             return value
         user_data = {}
-        for name in editable_fields:
+        for name in usersdb.editable_user_fields:
             if name == 'organisation':
-                org_type = form.get('org_type', ORG_LITERAL)
-                if org_type == ORG_LITERAL:
-                    value = (ORG_LITERAL, get_form_field('org_literal'))
-                elif org_type == ORG_BY_ID:
-                    value = (ORG_BY_ID, get_form_field('org_id', False))
+                org_type = form.get('org_type', usersdb.ORG_LITERAL)
+                if org_type == usersdb.ORG_LITERAL:
+                    value = (usersdb.ORG_LITERAL,
+                             get_form_field('org_literal'))
+                elif org_type == usersdb.ORG_BY_ID:
+                    value = (usersdb.ORG_BY_ID,
+                             get_form_field('org_id', False))
                 else:
                     raise ValueError("Unknown organisation type %r" % org_type)
             else:

@@ -4,7 +4,7 @@ import re
 from lxml.html.soupparser import fromstring
 from mock import Mock, patch
 from eea.userseditor.users_editor import UsersEditor
-from eea.userseditor.ldap_agent import ORG_LITERAL, ORG_BY_ID
+from eea.usersdb import ORG_LITERAL, ORG_BY_ID
 
 def plaintext(element):
     import re

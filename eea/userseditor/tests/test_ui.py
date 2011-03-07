@@ -17,9 +17,9 @@ user_data_fixture = {
     'first_name': u"Joe",
     'last_name': u"Smith",
     'email': u"jsmith@example.com",
-    'uri': u"http://example.com/~jsmith",
+    'url': u"http://example.com/~jsmith",
     'postal_address': u"13 Smithsonian Way, Copenhagen, DK",
-    'telephone_number': u"555 1234",
+    'phone': u"555 1234",
     'organisation': (ORG_LITERAL, u"My company"),
 }
 
@@ -77,14 +77,13 @@ class AccountUITest(unittest.TestCase):
                          user_data_fixture['last_name'])
         self.assertEqual(val('//form//input[@name="email:utf8:ustring"]'),
                          user_data_fixture['email'])
-        self.assertEqual(val('//form//input[@name="uri:utf8:ustring"]'),
-                         user_data_fixture['uri'])
+        self.assertEqual(val('//form//input[@name="url:utf8:ustring"]'),
+                         user_data_fixture['url'])
         self.assertEqual(txt('//form//textarea'
                                 '[@name="postal_address:utf8:ustring"]'),
                          "13 Smithsonian Way, Copenhagen, DK")
-        self.assertEqual(val('//form'
-                             '//input[@name="telephone_number:utf8:ustring"]'),
-                         user_data_fixture['telephone_number'])
+        self.assertEqual(val('//form//input[@name="phone:utf8:ustring"]'),
+                         user_data_fixture['phone'])
 
     @patch('eea.userseditor.users_editor.datetime')
     def test_submit_edit(self, mock_datetime):
@@ -94,7 +93,7 @@ class AccountUITest(unittest.TestCase):
 
         self.ui.edit_account(self.request)
 
-        self.mock_agent.bind.assert_called_with('jsmith', 'asdf')
+        self.mock_agent.bind_user.assert_called_with('jsmith', 'asdf')
         self.request.RESPONSE.redirect.assert_called_with(
                 'URL/edit_account_html')
         self.mock_agent.set_user_info.assert_called_with('jsmith',
@@ -128,7 +127,7 @@ class AccountUITest(unittest.TestCase):
 
         self.ui.change_password(self.request)
 
-        self.mock_agent.bind.assert_called_with('jsmith', 'asdf')
+        self.mock_agent.bind_user.assert_called_with('jsmith', 'asdf')
         self.mock_agent.set_user_password.assert_called_with('jsmith',
                                                              "asdf", "zxcv")
         self.request.RESPONSE.redirect.assert_called_with(
@@ -146,11 +145,11 @@ class AccountUITest(unittest.TestCase):
             'new_password': "zxcv",
             'new_password_confirm': "zxcv",
         }
-        self.mock_agent.bind.side_effect = ValueError
+        self.mock_agent.bind_user.side_effect = ValueError
 
         self.ui.change_password(self.request)
 
-        self.mock_agent.bind.assert_called_with('jsmith', 'qwer')
+        self.mock_agent.bind_user.assert_called_with('jsmith', 'qwer')
         assert self.mock_agent.set_user_password.call_count == 0
         self.request.RESPONSE.redirect.assert_called_with(
                 'URL/change_password_html')

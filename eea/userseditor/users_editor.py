@@ -144,7 +144,7 @@ class UsersEditor(SimpleItem, PropertyManager):
                 value = get_form_field(name)
             user_data[name] = value
         agent = self._get_ldap_agent()
-        agent.bind(user_id, _get_user_password(REQUEST))
+        agent.bind_user(user_id, _get_user_password(REQUEST))
         agent.set_user_info(user_id, user_data)
         when = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         _set_session_message(REQUEST, 'message', "Profile saved (%s)" % when)
@@ -175,7 +175,7 @@ class UsersEditor(SimpleItem, PropertyManager):
                                              '/change_password_html')
 
         try:
-            agent.bind(user_id, form['old_password'])
+            agent.bind_user(user_id, form['old_password'])
             agent.set_user_password(user_id, form['old_password'],
                                              form['new_password'])
         except ValueError:

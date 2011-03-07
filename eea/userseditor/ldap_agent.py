@@ -9,15 +9,15 @@ user_attr_map = {
     'last_name': 'sn',
     'full_name': 'cn',
     'email': 'mail',
-    'telephone_number': 'telephoneNumber',
+    'phone': 'telephoneNumber',
     'organisation': 'o',
     'postal_address': 'postalAddress',
     'fax': 'facsimileTelephoneNumber',
-    'uri': 'labeledURI',
+    'url': 'labeledURI',
 }
 
-editable_fields = ['first_name', 'last_name', 'email', 'organisation', 'uri',
-                   'postal_address', 'telephone_number']
+editable_fields = ['first_name', 'last_name', 'email', 'organisation', 'url',
+                   'postal_address', 'phone']
 
 ORG_LITERAL = 'literal'
 ORG_BY_ID = 'by_id'
@@ -184,7 +184,7 @@ class LdapAgent(object):
             assert result == (ldap.RES_MODIFY, [])
 
     @log_ldap_exceptions
-    def bind(self, user_id, user_pw):
+    def bind_user(self, user_id, user_pw):
         try:
             result = self.conn.simple_bind_s(self._user_dn(user_id), user_pw)
         except (ldap.INVALID_CREDENTIALS,

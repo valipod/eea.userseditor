@@ -48,7 +48,7 @@
 
   <tr>
     <th>URL:</th>
-    <td tal:content="data/uri" />
+    <td tal:content="data/url" />
   </tr>
 
   <tr>
@@ -58,7 +58,7 @@
 
   <tr>
     <th>Telephone number:</th>
-    <td tal:content="data/telephone_number" />
+    <td tal:content="data/phone" />
   </tr>
 
   <tr>

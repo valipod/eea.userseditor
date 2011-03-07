@@ -80,7 +80,7 @@ class LdapAgentTest(unittest.TestCase):
         user_info = self.agent.user_info('jsmith')
 
         self.assertEqual(user_info['email'], "jsmith@example.com")
-        self.assertEqual(user_info['uri'], "")
+        self.assertEqual(user_info['url'], "")
 
     def test_get_user_info_extra_fields(self):
         data_dict = {
@@ -102,13 +102,13 @@ class LdapAgentTest(unittest.TestCase):
 
     def test_bind_success(self):
         self.mock_conn.simple_bind_s.return_value = (ldap.RES_BIND, [])
-        self.agent.bind('jsmith', 'some_pw')
+        self.agent.bind_user('jsmith', 'some_pw')
         self.mock_conn.simple_bind_s.assert_called_once_with(
             'uid=jsmith,ou=Users,o=EIONET,l=Europe', 'some_pw')
 
     def test_bind_failure(self):
         self.mock_conn.simple_bind_s.side_effect = ldap.INVALID_CREDENTIALS
-        self.assertRaises(ValueError, self.agent.bind, 'jsmith', 'some_pw')
+        self.assertRaises(ValueError, self.agent.bind_user, 'jsmith', 'some_pw')
         self.mock_conn.simple_bind_s.assert_called_once_with(
             'uid=jsmith,ou=Users,o=EIONET,l=Europe', 'some_pw')
 
@@ -150,14 +150,14 @@ class LdapAgentEditingTest(unittest.TestCase):
 
     def test_user_info_diff(self):
         old_info = {
-            'uri': u"http://example.com/~jsmith",
+            'url': u"http://example.com/~jsmith",
             'postal_address': u"old address",
-            'telephone_number': u"555 1234",
+            'phone': u"555 1234",
         }
         new_info = {
             'email': u"jsmith@example.com",
             'postal_address': u"Kongens Nytorv 6, Copenhagen, Denmark",
-            'telephone_number': u"555 1234",
+            'phone': u"555 1234",
         }
 
         diff = self.agent._user_info_diff('jsmith', old_info, new_info, [])

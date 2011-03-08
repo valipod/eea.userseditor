@@ -57,6 +57,9 @@ def load_template(name, _memo={}):
         _memo[name] = PageTemplateFile(name, globals())
     return _memo[name]
 
+CIRCA_USER_SCHEMA = dict(usersdb.db_agent.EIONET_USER_SCHEMA, fax='fax')
+CIRCA_USERS_DN_SUFFIX = 'ou=Users,ou=DATA,ou=eea,o=IRCusers,l=CIRCA'
+
 class DualLDAPProxy(object):
     """
     while CIRCA is still online, we need to write stuff to both LDAP
@@ -82,6 +85,21 @@ class DualLDAPProxy(object):
     def __getattr__(self, name):
         # patch all other methods straight to front-end ldap
         return getattr(self._current_ldap, name)
+
+
+class CircaUsersDB(usersdb.UsersDB):
+    user_schema = CIRCA_USER_SCHEMA
+
+    def _user_dn(self, user_id):
+        return super(CircaUsersDB, self)._user_dn('%s@circa' % user_id)
+
+    def _user_id(self, user_dn):
+        circa_user_id = super(CircaUsersDB, self)._user_id(user_dn)
+        assert '@' in circa_user_id
+        return circa_user_id.split('@')[0]
+
+    def _search_user_in_orgs(self, user_id):
+        return []
 
 
 class UsersEditor(SimpleItem, PropertyManager):
@@ -113,8 +131,9 @@ class UsersEditor(SimpleItem, PropertyManager):
         # temporary fix while CIRCA is still online
         current_agent = usersdb.UsersDB(ldap_server=self.ldap_server)
         if write and self.legacy_ldap_server != "":
-            legacy_agent = usersdb.UsersDB(ldap_server=self.legacy_ldap_server,
-                                         encoding="ISO-8859-1")
+            legacy_agent = CircaUsersDB(ldap_server=self.legacy_ldap_server,
+                                        users_dn=CIRCA_USERS_DN_SUFFIX,
+                                        encoding="ISO-8859-1")
             return DualLDAPProxy(current_agent, legacy_agent)
         else:
             return current_agent

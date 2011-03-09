@@ -114,6 +114,18 @@
 
   <tr>
     <td class="right-td">
+      <label for="edit-mobile">Mobile telephone number:</label>
+    </td>
+    <td>
+      <input id="edit-mobile" type="text"
+             name="mobile:utf8:ustring" size="50"
+             class="text-input large"
+             tal:attributes="value data/mobile" />
+    </td>
+  </tr>
+
+  <tr>
+    <td class="right-td">
       <label for="edit-fax">Fax number:</label>
     </td>
     <td>

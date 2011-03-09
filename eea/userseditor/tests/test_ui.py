@@ -21,6 +21,7 @@ user_data_fixture = {
     'last_name': u"Smith",
     'job_title': u"Lab rat",
     'email': u"jsmith@example.com",
+    'mobile': u"555 4321",
     'url': u"http://example.com/~jsmith",
     'postal_address': u"13 Smithsonian Way, Copenhagen, DK",
     'phone': u"555 1234",
@@ -91,6 +92,8 @@ class AccountUITest(unittest.TestCase):
                          "13 Smithsonian Way, Copenhagen, DK")
         self.assertEqual(val('//form//input[@name="phone:utf8:ustring"]'),
                          user_data_fixture['phone'])
+        self.assertEqual(val('//form//input[@name="mobile:utf8:ustring"]'),
+                         user_data_fixture['mobile'])
         self.assertEqual(val('//form//input[@name="fax:utf8:ustring"]'),
                          user_data_fixture['fax'])
 

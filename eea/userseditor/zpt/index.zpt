@@ -67,6 +67,11 @@
   </tr>
 
   <tr>
+    <th>Mobile telephone number:</th>
+    <td tal:content="data/mobile" />
+  </tr>
+
+  <tr>
     <th>Fax number:</th>
     <td tal:content="data/fax" />
   </tr>

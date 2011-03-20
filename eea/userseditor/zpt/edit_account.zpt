@@ -140,25 +140,14 @@
     <td class="right-td">
       <label>Organisation:</label>
     </td>
-    <td tal:define="org_type python:data['organisation'][0];
-             org_value python:data['organisation'][1]">
+    <td>
       <table>
         <tr>
           <td>
-            <tal:block condition="nothing">
-            <input type="radio" name="org_type" value="literal"
-                   id="edit-org_type-literal"
-                   tal:attributes="checked python:org_type == 'literal'" />
-
-            <label for="edit-org_type-literal">Enter manually</label>
-            </tal:block><input type="hidden" name="org_type" value="literal" />
-
             <input id="edit-org_literal" type="text" size="50"
                    class="text-input medium"
-                   name="org_literal:utf8:ustring"
-                   tal:attributes="value python:(org_type == 'literal'
-                                                 and org_value
-                                                 or '')" />
+                   name="organisation:utf8:ustring"
+                   tal:attributes="value data/organisation" />
           </td>
 
           <tal:block condition="nothing">
@@ -198,6 +187,7 @@
 
 </form>
 
+<tal:block condition="nothing">
 <script>$(function() {
     var frm = $('form[name="edit-account"]');
 
@@ -217,3 +207,4 @@
     by_id_select.keypress(choose_by_id);
     by_id_select.change(choose_by_id);
 });</script>
+</tal:block>

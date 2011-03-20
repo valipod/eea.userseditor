@@ -154,8 +154,6 @@ class UsersEditor(SimpleItem, PropertyManager):
             agent = self._get_ldap_agent()
             user_id = _get_user_id(REQUEST)
             options['user_info'] = agent.user_info(user_id)
-            if options['user_info']['organisation'][0] == usersdb.ORG_BY_ID:
-                options['all_organisations'] = agent.all_organisations()
         else:
             options['user_info'] = None
         options.update(_get_session_messages(REQUEST))
@@ -192,19 +190,7 @@ class UsersEditor(SimpleItem, PropertyManager):
             return value
         user_data = {}
         for name in usersdb.editable_user_fields:
-            if name == 'organisation':
-                org_type = form.get('org_type', usersdb.ORG_LITERAL)
-                if org_type == usersdb.ORG_LITERAL:
-                    value = (usersdb.ORG_LITERAL,
-                             get_form_field('org_literal'))
-                elif org_type == usersdb.ORG_BY_ID:
-                    value = (usersdb.ORG_BY_ID,
-                             get_form_field('org_id', False))
-                else:
-                    raise ValueError("Unknown organisation type %r" % org_type)
-            else:
-                value = get_form_field(name)
-            user_data[name] = value
+            user_data[name] = get_form_field(name)
         agent = self._get_ldap_agent(write=True)
         agent.bind_user(user_id, _get_user_password(REQUEST))
         agent.set_user_info(user_id, user_data)

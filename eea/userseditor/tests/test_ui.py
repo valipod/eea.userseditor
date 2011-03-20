@@ -7,7 +7,6 @@ from lxml.html.soupparser import fromstring
 from mock import Mock, patch
 
 from eea.userseditor.users_editor import UsersEditor
-from eea.usersdb import ORG_LITERAL, ORG_BY_ID
 
 def plaintext(element):
     import re
@@ -26,7 +25,7 @@ user_data_fixture = {
     'postal_address': u"13 Smithsonian Way, Copenhagen, DK",
     'phone': u"555 1234",
     'fax': u"555 6789",
-    'organisation': (ORG_LITERAL, u"My company"),
+    'organisation': u"My company",
 }
 
 class MockLdapAgent(Mock):
@@ -101,7 +100,6 @@ class AccountUITest(unittest.TestCase):
     def test_submit_edit(self, mock_datetime):
         mock_datetime.now.return_value = datetime(2010, 12, 16, 13, 45, 21)
         self.request.form = dict(user_data_fixture)
-        self.request.form['org_literal'] = user_data_fixture['organisation'][1]
 
         self.ui.edit_account(self.request)
 
@@ -233,17 +231,12 @@ class EditOrganisationTest(unittest.TestCase):
         self.mock_agent.all_organisations = Mock(return_value=all_orgs)
 
     def test_show_literal(self):
-        self.mock_agent._user_info['organisation'] = (ORG_LITERAL, u"My club")
+        self.mock_agent._user_info['organisation'] = u"My club"
 
         page = parse_html(self.ui.edit_account_html(self.request))
 
-#        checked_radio = page.xpath('//form//input[@name="org_type"]'
-#                                                '[@checked="checked"]')
-#        self.assertEqual(len(checked_radio), 1)
-#        self.assertEqual(checked_radio[0].attrib['value'], ORG_LITERAL)
-
         literal_input = page.xpath('//form'
-                                   '//input[@name="org_literal:utf8:ustring"]')
+                                   '//input[@name="organisation:utf8:ustring"]')
         self.assertEqual(len(literal_input), 1)
         self.assertEqual(literal_input[0].attrib['value'], u"My club")
 
@@ -253,10 +246,6 @@ class EditOrganisationTest(unittest.TestCase):
 
         page = parse_html(self.ui.edit_account_html(self.request))
 
-        checked_radio = page.xpath('//form//input[@name="org_type"]'
-                                                '[@checked="checked"]')
-        self.assertEqual(len(checked_radio), 1)
-        self.assertEqual(checked_radio[0].attrib['value'], ORG_BY_ID)
         select_by_id = page.xpath('//form//select[@name="org_id"]')[0]
         options = select_by_id.xpath('option')
         self.assertEqual(len(options), 3)
@@ -269,18 +258,16 @@ class EditOrganisationTest(unittest.TestCase):
         self.assertTrue('selected' not in options[2].attrib)
 
     def test_submit_literal(self):
-        self.request.form = {
-            'org_type': 'literal',
-            'org_literal': u"My own little club",
-        }
+        self.request.form = {'organisation': u"My own little club"}
 
         self.ui.edit_account(self.request)
 
         user_info = dict( (name, u"") for name in user_data_fixture )
-        user_info['organisation'] = (ORG_LITERAL, u"My own little club")
+        user_info['organisation'] = u"My own little club"
         self.mock_agent.set_user_info.assert_called_with('jsmith', user_info)
 
     def test_submit_by_id(self):
+        raise SkipTest
         self.request.form = {
             'org_type': 'by_id',
             'org_id': 'bridge_club',

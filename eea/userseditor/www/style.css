@@ -145,7 +145,6 @@ table.account-table tr {
 	border-top: 1px solid #EAEAEA;
 }
 
-table.account-table tr:last-child,
 tr.no-border {
 	border: none !important;
 }

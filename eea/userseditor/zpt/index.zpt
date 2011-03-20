@@ -78,13 +78,7 @@
 
   <tr>
     <th>Organisation:</th>
-    <tal:block define="org_type python:data['organisation'][0];
-                       org_value python:data['organisation'][1]">
-      <td tal:condition="python:org_type == 'literal'"
-          tal:content="org_value" />
-      <td tal:condition="python:org_type == 'by_id'"
-          tal:content="python:options['all_organisations'][org_value]" />
-    </tal:block>
+    <td tal:content="data/organisation" />
   </tr>
 </table>
 

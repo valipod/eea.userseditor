@@ -8,5 +8,5 @@ setup(name='eea.userseditor',
       packages=find_packages(),
       include_package_data=True,
       zip_safe=False,
-      install_requires=['eea.usersdb'],
+      install_requires=['eea.usersdb', 'deform'],
 )

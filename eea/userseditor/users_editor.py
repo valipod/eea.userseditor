@@ -8,11 +8,16 @@ from AccessControl.Permissions import view
 
 from persistent.list import PersistentList
 from persistent.mapping import PersistentMapping
+import deform
 
 from eea import usersdb
 
+user_info_schema = usersdb.user_info_schema.clone()
+user_info_schema['postal_address'].widget = deform.widget.TextAreaWidget()
 
 SESSION_MESSAGES = 'eea.userseditor.messages'
+SESSION_FORM_DATA = 'eea.userseditor.form_data'
+SESSION_FORM_ERRORS = 'eea.userseditor.form_errors'
 
 manage_addUsersEditor_html = PageTemplateFile('zpt/add', globals())
 def manage_addUsersEditor(parent, id, title="", ldap_server="", REQUEST=None):
@@ -38,6 +43,15 @@ def _set_session_message(request, msg_type, msg):
         session[SESSION_MESSAGES] = PersistentMapping()
     # TODO: allow for more than one message of each type
     session[SESSION_MESSAGES][msg_type] = msg
+
+def _session_pop(request, name, default):
+    session = request.SESSION
+    if name in session.keys():
+        value = session[name]
+        del session[name]
+        return value
+    else:
+        return default
 
 def _get_user_password(request):
     return request.AUTHENTICATED_USER.__
@@ -165,15 +179,23 @@ class UsersEditor(SimpleItem, PropertyManager):
         if not _is_logged_in(REQUEST):
             return REQUEST.RESPONSE.redirect(self.absolute_url() + '/')
 
-        user_id = _get_user_id(REQUEST)
         agent = self._get_ldap_agent()
+        user_id = _get_user_id(REQUEST)
         all_orgs = agent.all_organisations()
         sort_key = lambda org_id: all_orgs[org_id].strip().lower()
+
+        errors = _session_pop(REQUEST, SESSION_FORM_ERRORS, {})
+        form_data = _session_pop(REQUEST, SESSION_FORM_DATA, None)
+        if form_data is None:
+            form_data = agent.user_info(user_id)
+
         options = {
             'base_url': self.absolute_url(),
-            'form_data': agent.user_info(user_id),
+            'form_data': form_data,
             'all_organisations': all_orgs,
             'sorted_org_ids': sorted(all_orgs, key=sort_key),
+            'errors': errors,
+            'schema': user_info_schema,
         }
         options.update(_get_session_messages(REQUEST))
         return self._render_template('zpt/edit_account.zpt', **options)
@@ -182,20 +204,29 @@ class UsersEditor(SimpleItem, PropertyManager):
     def edit_account(self, REQUEST):
         """ view """
         user_id = _get_user_id(REQUEST)
-        form = REQUEST.form
-        def get_form_field(name, check_unicode=True):
-            value = form.get(name, u"")
-            if check_unicode:
-                assert isinstance(value, unicode), repr( (name, value) )
-            return value
-        user_data = {}
-        for name in usersdb.editable_user_fields:
-            user_data[name] = get_form_field(name)
-        agent = self._get_ldap_agent(write=True)
-        agent.bind_user(user_id, _get_user_password(REQUEST))
-        agent.set_user_info(user_id, user_data)
-        when = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        _set_session_message(REQUEST, 'message', "Profile saved (%s)" % when)
+
+        user_form = deform.Form(user_info_schema)
+
+        try:
+            user_data = user_form.validate(REQUEST.form.items())
+
+        except deform.ValidationFailure, e:
+            session = REQUEST.SESSION
+            errors = {}
+            for field_error in e.error.children:
+                errors[field_error.node.name] = field_error.msg
+            session[SESSION_FORM_ERRORS] = errors
+            session[SESSION_FORM_DATA] = dict(REQUEST.form)
+            msg = u"Please correct the errors below and try again."
+            _set_session_message(REQUEST, 'error', msg)
+
+        else:
+            agent = self._get_ldap_agent(write=True)
+            agent.bind_user(user_id, _get_user_password(REQUEST))
+            agent.set_user_info(user_id, user_data)
+            when = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            _set_session_message(REQUEST, 'message', "Profile saved (%s)" % when)
+
         REQUEST.RESPONSE.redirect(self.absolute_url() + '/edit_account_html')
 
     security.declareProtected(view, 'change_password_html')

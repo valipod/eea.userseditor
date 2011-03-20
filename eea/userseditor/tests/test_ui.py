@@ -7,6 +7,9 @@ from lxml.html.soupparser import fromstring
 from mock import Mock, patch
 
 from eea.userseditor.users_editor import UsersEditor
+from eea.userseditor.users_editor import (SESSION_MESSAGES, SESSION_FORM_DATA,
+                                          SESSION_FORM_ERRORS)
+from eea.usersdb.schema import INVALID_PHONE_MESSAGE
 
 def plaintext(element):
     import re
@@ -15,16 +18,19 @@ def plaintext(element):
 def parse_html(html):
     return fromstring(re.sub(r'\s+', ' ', html))
 
+def session_messages(request):
+    return request.SESSION.get(SESSION_MESSAGES)
+
 user_data_fixture = {
     'first_name': u"Joe",
     'last_name': u"Smith",
     'job_title': u"Lab rat",
     'email': u"jsmith@example.com",
-    'mobile': u"555 4321",
+    'mobile': u"+45 555 4321",
     'url': u"http://example.com/~jsmith",
     'postal_address': u"13 Smithsonian Way, Copenhagen, DK",
-    'phone': u"555 1234",
-    'fax': u"555 6789",
+    'phone': u"+45 555 1234",
+    'fax': u"+45 555 6789",
     'organisation': u"My company",
 }
 
@@ -258,12 +264,11 @@ class EditOrganisationTest(unittest.TestCase):
         self.assertTrue('selected' not in options[2].attrib)
 
     def test_submit_literal(self):
-        self.request.form = {'organisation': u"My own little club"}
+        user_info = dict(user_data_fixture, organisation=u"My own little club")
+        self.request.form = dict(user_info)
 
         self.ui.edit_account(self.request)
 
-        user_info = dict( (name, u"") for name in user_data_fixture )
-        user_info['organisation'] = u"My own little club"
         self.mock_agent.set_user_info.assert_called_with('jsmith', user_info)
 
     def test_submit_by_id(self):
@@ -278,3 +283,78 @@ class EditOrganisationTest(unittest.TestCase):
         user_info = dict( (name, u"") for name in user_data_fixture )
         user_info['organisation'] = (ORG_BY_ID, 'bridge_club')
         self.mock_agent.set_user_info.assert_called_with('jsmith', user_info)
+
+
+class EditValidationTest(unittest.TestCase):
+    def setUp(self):
+        self.ui = StubbedUsersEditor()
+        self.request = mock_request()
+        self.request.AUTHENTICATED_USER = mock_user('jsmith', 'asdf')
+        self.mock_agent = MockLdapAgent()
+        self.ui._get_ldap_agent = Mock(return_value=self.mock_agent)
+
+    def test_redirect_and_session_message(self):
+        self.request.form = dict(user_data_fixture, first_name=u"")
+
+        self.ui.edit_account(self.request)
+
+        self.request.RESPONSE.redirect.assert_called_with(
+                'URL/edit_account_html')
+        msg = u"Please correct the errors below and try again."
+        self.assertEqual(session_messages(self.request), {'error': msg})
+
+    def test_values_preserved_if_error(self):
+        tfax = u"+40 1234 5678"
+        self.request.form = dict(user_data_fixture, first_name=u"", fax=tfax)
+
+        self.ui.edit_account(self.request)
+
+        page = parse_html(self.ui.edit_account_html(self.request))
+        val = lambda xp: page.xpath(xp)[0].attrib['value']
+        self.assertEqual(val('//form//input[@name="fax:utf8:ustring"]'), tfax)
+
+    def _test_missing_field(self, name):
+        self.request.form = dict(user_data_fixture, **{name: u""})
+
+        self.ui.edit_account(self.request)
+
+        page = parse_html(self.ui.edit_account_html(self.request))
+
+        txt = lambda xp: plaintext(page.xpath(xp)[0])
+        self.assertEqual(txt('//form//p[@id="error-edit-%s"]' % name),
+                         "Required")
+
+    def test_missing(self):
+        self._test_missing_field('first_name')
+        self._test_missing_field('last_name')
+        self._test_missing_field('email')
+
+    def _test_invalid_phone(self, name):
+        self.request.form = dict(user_data_fixture, **{name: u"qwer"})
+
+        self.ui.edit_account(self.request)
+
+        page = parse_html(self.ui.edit_account_html(self.request))
+
+        txt = lambda xp: plaintext(page.xpath(xp)[0])
+        self.assertEqual(txt('//form//p[@id="error-edit-%s"]' % name),
+                         INVALID_PHONE_MESSAGE)
+
+    def test_phone_numbers(self):
+        self._test_invalid_phone('phone')
+        self._test_invalid_phone('mobile')
+        self._test_invalid_phone('fax')
+
+    def test_error_messages(self):
+        errors = dict((name, "ERROR %s HERE" % name)
+                       for name in user_data_fixture)
+        self.request.SESSION.update({
+            SESSION_FORM_DATA: dict(user_data_fixture),
+            SESSION_FORM_ERRORS: dict(errors),
+        })
+
+        page = parse_html(self.ui.edit_account_html(self.request))
+        txt = lambda xp: plaintext(page.xpath(xp)[0])
+        for name, value in errors.iteritems():
+            error_text = txt('//form//p[@id="error-edit-%s"]' % name)
+            self.assertEqual(error_text, value, "Bad error for %s" % name)

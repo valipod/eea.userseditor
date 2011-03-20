@@ -28,154 +28,23 @@
      tal:condition="python:options.get('message', False)"
      tal:content="options/message" />
 
-<form action="edit_account" method="post" name="edit-account"
-      tal:define="data options/form_data">
+<form action="edit_account" method="post" name="edit-account">
 
 <table class="account-table">
-  <tr>
-    <td class="right-td">
-      <label for="edit-first_name">First name:</label>
-    </td>
-    <td>
-      <input id="edit-first_name" type="text"
-             name="first_name:utf8:ustring"
-             class="text-input large"
-             size="50" tal:attributes="value data/first_name" />
-    </td>
-  </tr>
 
-  <tr>
-    <td class="right-td">
-      <label for="edit-last_name">Last name:</label>
-    </td>
-    <td>
-      <input id="edit-last_name" type="text"
-             name="last_name:utf8:ustring"
-             class="text-input large"
-             size="50" tal:attributes="value data/last_name" /></td>
-  </tr>
-
-  <tr>
-    <td class="right-td">
-      <label for="edit-job_title">Job title:</label>
-    </td>
-    <td>
-      <input id="edit-job_title" type="text"
-             name="job_title:utf8:ustring"
-             class="text-input large"
-             size="50" tal:attributes="value data/job_title" /></td>
-  </tr>
-
-  <tr>
-    <td class="right-td">
-      <label for="edit-email">E-mail:</label>
-    </td>
-    <td>
-      <input id="edit-email" type="text" name="email:utf8:ustring"
-             class="text-input large"
-             size="50" tal:attributes="value data/email" />
-    </td>
-  </tr>
-
-  <tr>
-    <td class="right-td">
-      <label for="edit-url">URL:</label>
-    </td>
-    <td>
-      <input id="edit-url" type="text" name="url:utf8:ustring"
-             class="text-input large"
-             size="50" tal:attributes="value data/url" />
-    </td>
-  </tr>
-
-  <tr>
-    <td class="right-td top">
-      <label for="edit-postal_address">Postal address:</label>
-    </td>
-    <td>
-      <textarea id="edit-postal_address"
-                name="postal_address:utf8:ustring"
-                class="account-textarea large"
-                tal:content="data/postal_address" />
-    </td>
-  </tr>
-
-  <tr>
-    <td class="right-td">
-      <label for="edit-phone">Telephone number:</label>
-    </td>
-    <td>
-      <input id="edit-phone" type="text"
-             name="phone:utf8:ustring" size="50"
-             class="text-input large"
-             tal:attributes="value data/phone" />
-    </td>
-  </tr>
-
-  <tr>
-    <td class="right-td">
-      <label for="edit-mobile">Mobile telephone number:</label>
-    </td>
-    <td>
-      <input id="edit-mobile" type="text"
-             name="mobile:utf8:ustring" size="50"
-             class="text-input large"
-             tal:attributes="value data/mobile" />
-    </td>
-  </tr>
-
-  <tr>
-    <td class="right-td">
-      <label for="edit-fax">Fax number:</label>
-    </td>
-    <td>
-      <input id="edit-fax" type="text"
-             name="fax:utf8:ustring" size="50"
-             class="text-input large"
-             tal:attributes="value data/fax" />
-    </td>
-  </tr>
-
-  <tr>
-    <td class="right-td">
-      <label>Organisation:</label>
-    </td>
-    <td>
-      <table>
-        <tr>
-          <td>
-            <input id="edit-org_literal" type="text" size="50"
-                   class="text-input medium"
-                   name="organisation:utf8:ustring"
-                   tal:attributes="value data/organisation" />
-          </td>
-
-          <tal:block condition="nothing">
-          <td align="center"><strong>OR</strong></td>
-
-          <td>
-            <input type="radio" name="org_type" value="by_id"
-                  id="edit-org_type-by_id"
-                  tal:attributes="checked python:org_type == 'by_id'" />
-            <label for="edit-org_type-by_id">Pick from list</label>
-
-            <select id="edit-org_id" name="org_id"
-                    class="account-select medium"
-                   tal:define="selected_id python:(org_type == 'by_id'
-                                                   and org_value
-                                                   or None)">
-             <option>--</option>
-             <option tal:repeat="org_id options/sorted_org_ids"
-                     tal:content="python:options['all_organisations'][org_id]"
-                     tal:attributes="value org_id;
-                                     selected python:org_id == selected_id" />
-            </select>
-          </td>
-          </tal:block>
-        </tr>
-      </table>
-    </td>
-  </tr>
+  <tal:block repeat="schema_field options/schema">
+    <tr tal:define="field_name schema_field/name;
+                    field python:{
+                      'name': field_name,
+                      'value': options['form_data'][field_name],
+                      'label': schema_field.description,
+                      'error': options['errors'].get(field_name, None),
+                      'widget': schema_field.widget,
+                      'required': schema_field.required,
+                    }">
+      <metal:block use-macro="template/macros/form-field" />
+    </tr>
+  </tal:block>
 
   <tr>
     <td colspan="2" align="center">
@@ -207,4 +76,42 @@
     by_id_select.keypress(choose_by_id);
     by_id_select.change(choose_by_id);
 });</script>
+</tal:block>
+
+<tal:block condition="nothing">
+<metal:block define-macro="form-field">
+  <tal:block define="field_id string:edit-${field/name}">
+    <td class="right-td">
+      <label tal:define="required_cls python:['required' if
+                                            field['required'] else '']"
+             tal:attributes="for field_id; class python:' '.join(['question'] +
+                                                                 required_cls);"
+             tal:content="string:${field/label}:"/>
+    </td>
+    <td tal:define="widget_template field/widget/template|string:textinput;
+                    input_classes python:['error'] if field['error'] else [];
+                    is_textarea python: widget_template == 'textarea'">
+      <span tal:condition="field/required"/>
+      <input tal:condition="not:is_textarea"
+             type="text" size="50"
+             tal:attributes="id field_id;
+                             class python:' '.join(input_classes +
+                                    ['text-input', 'large']);
+                             name string:${field/name}:utf8:ustring;
+                             value field/value" />
+      <textarea tal:condition="is_textarea"
+                class="account-textarea large"
+                tal:attributes="id field_id;
+                                class python:' '.join(input_classes +
+                                    ['account-textarea', 'large']);
+                                name string:${field/name}:utf8:ustring"
+                tal:content="field/value"></textarea>
+      <p class="error-hint"
+         tal:attributes="id string:error-${field_id}"
+         tal:condition="field/error"
+         tal:content="field/error" />
+    </td>
+  </tal:block>
+
+</metal:block>
 </tal:block>

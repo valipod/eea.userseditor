@@ -207,6 +207,17 @@ input.text-input.large {
 	width: 350px;
 }
 
+input.error {
+	border: 1px solid #B50000;
+}
+
+p.error-hint {
+	border: none;
+	background-color: transparent;
+	color: #B50000;
+	font-size: 100%;
+}
+
 /**
  * Fields events
 */

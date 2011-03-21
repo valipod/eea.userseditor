@@ -9,7 +9,7 @@ from mock import Mock, patch
 from eea.userseditor.users_editor import UsersEditor
 from eea.userseditor.users_editor import (SESSION_MESSAGES, SESSION_FORM_DATA,
                                           SESSION_FORM_ERRORS)
-from eea.usersdb.schema import INVALID_PHONE_MESSAGE
+from eea.usersdb.schema import INVALID_PHONE_MESSAGE, INVALID_URL
 
 def plaintext(element):
     import re
@@ -329,21 +329,22 @@ class EditValidationTest(unittest.TestCase):
         self._test_missing_field('last_name')
         self._test_missing_field('email')
 
-    def _test_invalid_phone(self, name):
-        self.request.form = dict(user_data_fixture, **{name: u"qwer"})
+    def _test_invalid(self, name, value, message):
+        self.request.form = dict(user_data_fixture, **{name: value})
 
         self.ui.edit_account(self.request)
 
         page = parse_html(self.ui.edit_account_html(self.request))
 
         txt = lambda xp: plaintext(page.xpath(xp)[0])
-        self.assertEqual(txt('//form//p[@id="error-edit-%s"]' % name),
-                         INVALID_PHONE_MESSAGE)
+        self.assertEqual(txt('//form//p[@id="error-edit-%s"]' % name), message)
 
-    def test_phone_numbers(self):
-        self._test_invalid_phone('phone')
-        self._test_invalid_phone('mobile')
-        self._test_invalid_phone('fax')
+    def test_invalid_values(self):
+        self._test_invalid('phone', 'qwer', INVALID_PHONE_MESSAGE)
+        self._test_invalid('mobile', 'qwer', INVALID_PHONE_MESSAGE)
+        self._test_invalid('fax', 'qwer', INVALID_PHONE_MESSAGE)
+        self._test_invalid('url', 'qwer', INVALID_URL)
+        self._test_invalid('email', 'qwer', "Invalid email address")
 
     def test_error_messages(self):
         errors = dict((name, "ERROR %s HERE" % name)

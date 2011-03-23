@@ -207,8 +207,19 @@ class UsersEditor(SimpleItem, PropertyManager):
 
         user_form = deform.Form(user_info_schema)
 
+        class CircaError(Exception): pass
         try:
             user_data = user_form.validate(REQUEST.form.items())
+
+            bad = {}
+            for name, value in user_data.items():
+                try:
+                    value.encode('latin-1')
+                except UnicodeEncodeError:
+                    bad[name] = (u"Until CIRCA is phased out, please use only "
+                            "Western European characters in profile fields.")
+            if bad:
+                raise CircaError(bad)
 
         except deform.ValidationFailure, e:
             session = REQUEST.SESSION
@@ -216,6 +227,13 @@ class UsersEditor(SimpleItem, PropertyManager):
             for field_error in e.error.children:
                 errors[field_error.node.name] = field_error.msg
             session[SESSION_FORM_ERRORS] = errors
+            session[SESSION_FORM_DATA] = dict(REQUEST.form)
+            msg = u"Please correct the errors below and try again."
+            _set_session_message(REQUEST, 'error', msg)
+
+        except CircaError, e:
+            session = REQUEST.SESSION
+            session[SESSION_FORM_ERRORS] = e.args[0]
             session[SESSION_FORM_DATA] = dict(REQUEST.form)
             msg = u"Please correct the errors below and try again."
             _set_session_message(REQUEST, 'error', msg)

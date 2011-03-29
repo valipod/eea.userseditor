@@ -424,3 +424,7 @@ div.filter-section table.account-table:hover {
 .hidden-loading {
 	display: none;
 }
+
+.view-multiline {
+	white-space: pre;
+}

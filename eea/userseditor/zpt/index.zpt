@@ -58,7 +58,7 @@
 
   <tr>
     <th>Postal address:</th>
-    <td tal:content="data/postal_address" />
+    <td class="view-multiline" tal:content="data/postal_address" />
   </tr>
 
   <tr>

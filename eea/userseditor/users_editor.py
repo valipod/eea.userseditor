@@ -9,11 +9,16 @@ from AccessControl.Permissions import view
 from persistent.list import PersistentList
 from persistent.mapping import PersistentMapping
 import deform
+import colander
 
 from eea import usersdb
 
 user_info_schema = usersdb.user_info_schema.clone()
 user_info_schema['postal_address'].widget = deform.widget.TextAreaWidget()
+_password_node = colander.SchemaNode(colander.String(), name='password',
+    widget=deform.widget.PasswordWidget(),
+    description="Enter current password to make changes")
+user_info_schema.children.insert(0, _password_node)
 
 SESSION_MESSAGES = 'eea.userseditor.messages'
 SESSION_FORM_DATA = 'eea.userseditor.form_data'
@@ -188,6 +193,7 @@ class UsersEditor(SimpleItem, PropertyManager):
         form_data = _session_pop(REQUEST, SESSION_FORM_DATA, None)
         if form_data is None:
             form_data = agent.user_info(user_id)
+        form_data['password'] = ""
 
         options = {
             'base_url': self.absolute_url(),
@@ -240,7 +246,8 @@ class UsersEditor(SimpleItem, PropertyManager):
 
         else:
             agent = self._get_ldap_agent(write=True)
-            agent.bind_user(user_id, _get_user_password(REQUEST))
+            user_password = user_data.pop('password')
+            agent.bind_user(user_id, user_password)
             agent.set_user_info(user_id, user_data)
             when = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             _set_session_message(REQUEST, 'message', "Profile saved (%s)" % when)

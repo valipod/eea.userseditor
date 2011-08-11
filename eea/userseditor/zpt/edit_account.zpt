@@ -82,23 +82,21 @@
 <metal:block define-macro="form-field">
   <tal:block define="field_id string:edit-${field/name}">
     <td class="right-td">
-      <label tal:define="required_cls python:[
-                              field['required'] and 'required' or '']"
-             tal:attributes="for field_id; class python:' '.join(['question'] +
-                                                                 required_cls);"
+      <label class="question" tal:attributes="for field_id"
              tal:content="string:${field/label}:"/>
+      <span style="color:red" tal:condition="field/required">*</span>
     </td>
     <td tal:define="widget_template field/widget/template|string:textinput;
                     input_classes python:field['error'] and ['error'] or [];
                     is_textarea python: widget_template == 'textarea'">
-      <span tal:condition="field/required"/>
       <input tal:condition="not:is_textarea"
              type="text" size="50"
              tal:attributes="id field_id;
                              class python:' '.join(input_classes +
                                     ['text-input', 'large']);
                              name string:${field/name}:utf8:ustring;
-                             value field/value" />
+                             value field/value;
+                             type python:widget_template == 'password' and 'password' or None" />
       <textarea tal:condition="is_textarea"
                 class="account-textarea large"
                 tal:attributes="id field_id;
